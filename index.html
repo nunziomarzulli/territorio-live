@@ -125,7 +125,10 @@ button{
   <div id="mapPanel">
     <strong>Conferma posizione</strong>
     <p>Se il punto non è preciso, trascina il pin.</p>
-    <button class="primary" id="confirmPositionBtn">Conferma posizione</button>
+    <div class="buttons">
+  <button class="secondary" id="backFromMapBtn">Rifai foto</button>
+  <button class="primary" id="confirmPositionBtn">Conferma posizione</button>
+</div>
   </div>
 </section>
 
@@ -142,6 +145,7 @@ const previewImg = document.getElementById("previewImg");
 const retakeBtn = document.getElementById("retakeBtn");
 const continueBtn = document.getElementById("continueBtn");
 const confirmPositionBtn = document.getElementById("confirmPositionBtn");
+const backFromMapBtn = document.getElementById("backFromMapBtn");
 
 let selectedPhoto = null;
 let map = null;
@@ -237,6 +241,11 @@ function initMap(lat, lng){
   }, 300);
 }
 
+  backFromMapBtn.onclick = () => {
+  camera.value = "";
+  selectedPhoto = null;
+  showScreen(startScreen);
+};
 confirmPositionBtn.onclick = () => {
   alert("Posizione confermata:\nLat: " + currentLat + "\nLng: " + currentLng);
 };
