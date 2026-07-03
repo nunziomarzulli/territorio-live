@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Territorio Live</title> 
+<title>Territorio Live</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
@@ -78,19 +78,43 @@ button{
   flex-direction:column;
 }
 
-#map{
+#topBar{
+  height:56px;
   width:100%;
-  height:60vh;
+  background:white;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 12px;
+  box-sizing:border-box;
+  border-bottom:1px solid #ddd;
+  z-index:999;
 }
 
-#mapPanel{
-  padding:15px;
-  background:white;
+#backFromMapBtn{
+  background:#ddd;
+  color:#222;
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:16px;
+}
+
+#topBarTitle{
+  font-weight:bold;
+  font-size:16px;
+}
+
+#confirmTopBtn{
+  background:#2e7d32;
+  color:white;
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:16px;
+}
+
+#map{
   width:100%;
-  box-sizing:border-box;
-  position:fixed;
-  bottom:0;
-  left:0;
+  height:calc(100vh - 56px);
 }
 
 #loadingText{
@@ -112,13 +136,10 @@ button{
 <section id="previewScreen" class="screen">
   <div>
     <img id="previewImg" alt="Anteprima foto">
-   <button class="secondary" id="backFromMapBtn" style="width:90%;margin-bottom:10px;">
-⬅️ Rifai foto
-</button>
-
-<button class="primary" id="confirmPositionBtn" style="width:90%;">
-✅ Conferma posizione
-</button>
+    <div class="buttons">
+      <button class="secondary" id="retakeBtn">Rifai</button>
+      <button class="primary" id="continueBtn">Continua</button>
+    </div>
   </div>
 </section>
 
@@ -127,15 +148,13 @@ button{
 </section>
 
 <section id="mapScreen" class="screen">
-  <div id="map"></div>
-  <div id="mapPanel">
-    <strong>Conferma posizione</strong>
-    <p>Se il punto non è preciso, trascina il pin.</p>
-    <div class="buttons">
-  <button class="secondary" id="backFromMapBtn">Rifai foto</button>
-  <button class="primary" id="confirmPositionBtn">Conferma posizione</button>
-</div>
+  <div id="topBar">
+    <button id="backFromMapBtn">← Indietro</button>
+    <div id="topBarTitle">Conferma posizione</div>
+    <button id="confirmTopBtn">Conferma</button>
   </div>
+
+  <div id="map"></div>
 </section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -150,8 +169,8 @@ const mapScreen = document.getElementById("mapScreen");
 const previewImg = document.getElementById("previewImg");
 const retakeBtn = document.getElementById("retakeBtn");
 const continueBtn = document.getElementById("continueBtn");
-const confirmPositionBtn = document.getElementById("confirmPositionBtn");
 const backFromMapBtn = document.getElementById("backFromMapBtn");
+const confirmTopBtn = document.getElementById("confirmTopBtn");
 
 let selectedPhoto = null;
 let map = null;
@@ -247,12 +266,11 @@ function initMap(lat, lng){
   }, 300);
 }
 
-  backFromMapBtn.onclick = () => {
-  camera.value = "";
-  selectedPhoto = null;
-  showScreen(startScreen);
+backFromMapBtn.onclick = () => {
+  showScreen(previewScreen);
 };
-confirmPositionBtn.onclick = () => {
+
+confirmTopBtn.onclick = () => {
   alert("Posizione confermata:\nLat: " + currentLat + "\nLng: " + currentLng);
 };
 </script>
