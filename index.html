@@ -1,97 +1,161 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Territorio Live</title>
 
 <style>
-
 body{
-    margin:0;
-    font-family:Arial,Helvetica,sans-serif;
-    background:#f5f5f5;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#f5f5f5;
+  height:100vh;
 }
 
-#container{
-    text-align:center;
+.screen{
+  display:none;
+  height:100vh;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  padding:20px;
+  box-sizing:border-box;
+}
+
+.active{
+  display:flex;
 }
 
 #cameraBtn{
-    width:220px;
-    height:220px;
-    border-radius:50%;
-    border:none;
-    background:#2e7d32;
-    color:white;
-    font-size:28px;
-    cursor:pointer;
+  width:220px;
+  height:220px;
+  border-radius:50%;
+  border:none;
+  background:#2e7d32;
+  color:white;
+  font-size:28px;
+  cursor:pointer;
 }
 
 #cameraBtn:active{
-    transform:scale(.97);
-}
-
-p{
-    margin-top:25px;
-    font-size:20px;
+  transform:scale(.97);
 }
 
 input{
-    display:none;
+  display:none;
 }
 
-</style>
+#previewImg{
+  max-width:100%;
+  max-height:65vh;
+  border-radius:16px;
+  box-shadow:0 4px 18px rgba(0,0,0,.25);
+}
 
+.buttons{
+  margin-top:25px;
+  display:flex;
+  gap:15px;
+  justify-content:center;
+}
+
+button.secondary,
+button.primary{
+  border:none;
+  padding:14px 22px;
+  border-radius:12px;
+  font-size:18px;
+  cursor:pointer;
+}
+
+button.secondary{
+  background:#ddd;
+  color:#222;
+}
+
+button.primary{
+  background:#2e7d32;
+  color:white;
+}
+
+#stato{
+  margin-top:25px;
+  font-size:20px;
+}
+</style>
 </head>
 
 <body>
 
-<div id="container">
+<section id="startScreen" class="screen active">
+  <div>
+    <input type="file" accept="image/*" capture="environment" id="camera">
 
-<input
-type="file"
-accept="image/*"
-capture="environment"
-id="camera">
+    <button id="cameraBtn">
+      📷<br><br>
+      SCATTA
+    </button>
 
-<button id="cameraBtn">
-📷<br><br>
-SCATTA
-</button>
+    <p id="stato">Tocca il pulsante per iniziare</p>
+  </div>
+</section>
 
-<p id="stato">
-Tocca il pulsante per iniziare
-</p>
+<section id="previewScreen" class="screen">
+  <div>
+    <img id="previewImg" alt="Anteprima foto">
 
-</div>
+    <div class="buttons">
+      <button class="secondary" id="retakeBtn">Rifai</button>
+      <button class="primary" id="continueBtn">Continua</button>
+    </div>
+  </div>
+</section>
 
 <script>
+const camera = document.getElementById("camera");
+const cameraBtn = document.getElementById("cameraBtn");
+const startScreen = document.getElementById("startScreen");
+const previewScreen = document.getElementById("previewScreen");
+const previewImg = document.getElementById("previewImg");
+const retakeBtn = document.getElementById("retakeBtn");
+const continueBtn = document.getElementById("continueBtn");
+const stato = document.getElementById("stato");
 
-const camera=document.getElementById("camera");
-const button=document.getElementById("cameraBtn");
-const stato=document.getElementById("stato");
+let selectedPhoto = null;
 
-button.onclick=()=>{
-
-camera.click();
-
+cameraBtn.onclick = () => {
+  camera.click();
 };
 
-camera.onchange=()=>{
+camera.onchange = () => {
+  const file = camera.files[0];
 
-stato.innerHTML="✅ Foto acquisita";
+  if (!file) return;
 
+  selectedPhoto = file;
+
+  const imageUrl = URL.createObjectURL(file);
+  previewImg.src = imageUrl;
+
+  startScreen.classList.remove("active");
+  previewScreen.classList.add("active");
 };
 
+retakeBtn.onclick = () => {
+  camera.value = "";
+  selectedPhoto = null;
+
+  previewScreen.classList.remove("active");
+  startScreen.classList.add("active");
+
+  stato.textContent = "Tocca il pulsante per iniziare";
+};
+
+continueBtn.onclick = () => {
+  alert("Prossimo passo: GPS e mappa.");
+};
 </script>
 
 </body>
-
 </html>
