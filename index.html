@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Territorio Live</title>
+<title>Territorio Live</title> 
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
@@ -80,7 +80,7 @@ button{
 
 #map{
   width:100%;
-  height:75vh;
+  height:60vh;
 }
 
 #mapPanel{
@@ -88,6 +88,9 @@ button{
   background:white;
   width:100%;
   box-sizing:border-box;
+  position:fixed;
+  bottom:0;
+  left:0;
 }
 
 #loadingText{
@@ -109,10 +112,13 @@ button{
 <section id="previewScreen" class="screen">
   <div>
     <img id="previewImg" alt="Anteprima foto">
-    <div class="buttons">
-      <button class="secondary" id="retakeBtn">Rifai</button>
-      <button class="primary" id="continueBtn">Continua</button>
-    </div>
+   <button class="secondary" id="backFromMapBtn" style="width:90%;margin-bottom:10px;">
+⬅️ Rifai foto
+</button>
+
+<button class="primary" id="confirmPositionBtn" style="width:90%;">
+✅ Conferma posizione
+</button>
   </div>
 </section>
 
