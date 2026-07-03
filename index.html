@@ -78,43 +78,27 @@ button{
   flex-direction:column;
 }
 
-#topBar{
-  height:56px;
-  width:100%;
-  background:white;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 12px;
-  box-sizing:border-box;
-  border-bottom:1px solid #ddd;
-  z-index:999;
-}
-
-#backFromMapBtn{
-  background:#ddd;
-  color:#222;
-  padding:10px 14px;
-  border-radius:10px;
-  font-size:16px;
-}
-
-#topBarTitle{
-  font-weight:bold;
-  font-size:16px;
-}
-
-#confirmTopBtn{
-  background:#2e7d32;
-  color:white;
-  padding:10px 14px;
-  border-radius:10px;
-  font-size:16px;
-}
-
 #map{
   width:100%;
-  height:calc(100vh - 56px);
+  height:62vh;
+}
+
+#mapPanel{
+  width:100%;
+  background:white;
+  padding:14px;
+  box-sizing:border-box;
+}
+
+#mapPanel h2{
+  margin:0 0 10px 0;
+  font-size:22px;
+}
+
+#confirmPositionBtn,
+#cancelMapBtn{
+  width:90%;
+  margin-top:10px;
 }
 
 #loadingText{
@@ -148,13 +132,20 @@ button{
 </section>
 
 <section id="mapScreen" class="screen">
-  <div id="topBar">
-    <button id="backFromMapBtn">← Indietro</button>
-    <div id="topBarTitle">Conferma posizione</div>
-    <button id="confirmTopBtn">Conferma</button>
-  </div>
-
   <div id="map"></div>
+
+  <div id="mapPanel">
+    <h2>Conferma posizione</h2>
+    <p>Se il punto non è preciso, trascina il pin.</p>
+
+    <button class="primary" id="confirmPositionBtn">
+      Conferma posizione
+    </button>
+
+    <button class="secondary" id="cancelMapBtn">
+      Annulla e rifai foto
+    </button>
+  </div>
 </section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -169,8 +160,8 @@ const mapScreen = document.getElementById("mapScreen");
 const previewImg = document.getElementById("previewImg");
 const retakeBtn = document.getElementById("retakeBtn");
 const continueBtn = document.getElementById("continueBtn");
-const backFromMapBtn = document.getElementById("backFromMapBtn");
-const confirmTopBtn = document.getElementById("confirmTopBtn");
+const confirmPositionBtn = document.getElementById("confirmPositionBtn");
+const cancelMapBtn = document.getElementById("cancelMapBtn");
 
 let selectedPhoto = null;
 let map = null;
@@ -196,7 +187,6 @@ camera.onchange = () => {
 
   selectedPhoto = file;
   previewImg.src = URL.createObjectURL(file);
-
   showScreen(previewScreen);
 };
 
@@ -266,12 +256,14 @@ function initMap(lat, lng){
   }, 300);
 }
 
-backFromMapBtn.onclick = () => {
-  showScreen(previewScreen);
+confirmPositionBtn.onclick = () => {
+  alert("Posizione confermata:\nLat: " + currentLat + "\nLng: " + currentLng);
 };
 
-confirmTopBtn.onclick = () => {
-  alert("Posizione confermata:\nLat: " + currentLat + "\nLng: " + currentLng);
+cancelMapBtn.onclick = () => {
+  camera.value = "";
+  selectedPhoto = null;
+  showScreen(startScreen);
 };
 </script>
 
