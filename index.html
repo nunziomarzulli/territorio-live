@@ -104,6 +104,37 @@ button{
 #loadingText{
   font-size:22px;
 }
+
+#categoryScreen{
+  align-items:flex-start;
+  overflow-y:auto;
+}
+
+#categoryBox{
+  width:100%;
+  max-width:420px;
+  margin:auto;
+}
+
+.categoryBtn{
+  width:100%;
+  margin:7px 0;
+  background:white;
+  border:1px solid #ddd;
+  color:#222;
+  text-align:left;
+}
+
+.categoryBtn.selected{
+  background:#2e7d32;
+  color:white;
+}
+
+#sendBtn,
+#backToMapBtn{
+  width:100%;
+  margin-top:12px;
+}
 </style>
 </head>
 
@@ -148,6 +179,24 @@ button{
   </div>
 </section>
 
+<section id="categoryScreen" class="screen">
+  <div id="categoryBox">
+    <h2>Che problema vuoi segnalare?</h2>
+
+    <button class="categoryBtn" data-category="Buca stradale">🕳️ Buca stradale</button>
+    <button class="categoryBtn" data-category="Rifiuti abbandonati">🗑️ Rifiuti abbandonati</button>
+    <button class="categoryBtn" data-category="Lampione spento">💡 Lampione spento</button>
+    <button class="categoryBtn" data-category="Albero o ramo pericolante">🌳 Albero o ramo pericolante</button>
+    <button class="categoryBtn" data-category="Segnaletica danneggiata">🚧 Segnaletica danneggiata</button>
+    <button class="categoryBtn" data-category="Veicolo abbandonato">🚗 Veicolo abbandonato</button>
+    <button class="categoryBtn" data-category="Marciapiede impraticabile">🚶 Marciapiede impraticabile</button>
+    <button class="categoryBtn" data-category="Altro">➕ Altro</button>
+
+    <button class="primary" id="sendBtn">Invia segnalazione</button>
+    <button class="secondary" id="backToMapBtn">Torna alla mappa</button>
+  </div>
+</section>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
@@ -157,13 +206,18 @@ const startScreen = document.getElementById("startScreen");
 const previewScreen = document.getElementById("previewScreen");
 const loadingScreen = document.getElementById("loadingScreen");
 const mapScreen = document.getElementById("mapScreen");
+const categoryScreen = document.getElementById("categoryScreen");
 const previewImg = document.getElementById("previewImg");
 const retakeBtn = document.getElementById("retakeBtn");
 const continueBtn = document.getElementById("continueBtn");
 const confirmPositionBtn = document.getElementById("confirmPositionBtn");
 const cancelMapBtn = document.getElementById("cancelMapBtn");
+const sendBtn = document.getElementById("sendBtn");
+const backToMapBtn = document.getElementById("backToMapBtn");
+const categoryButtons = document.querySelectorAll(".categoryBtn");
 
 let selectedPhoto = null;
+let selectedCategory = null;
 let map = null;
 let marker = null;
 let currentLat = null;
@@ -174,6 +228,7 @@ function showScreen(screen){
   previewScreen.classList.remove("active");
   loadingScreen.classList.remove("active");
   mapScreen.classList.remove("active");
+  categoryScreen.classList.remove("active");
   screen.classList.add("active");
 }
 
@@ -257,13 +312,44 @@ function initMap(lat, lng){
 }
 
 confirmPositionBtn.onclick = () => {
-  alert("Posizione confermata:\nLat: " + currentLat + "\nLng: " + currentLng);
+  showScreen(categoryScreen);
 };
 
 cancelMapBtn.onclick = () => {
   camera.value = "";
   selectedPhoto = null;
+  selectedCategory = null;
   showScreen(startScreen);
+};
+
+categoryButtons.forEach(button => {
+  button.onclick = () => {
+    categoryButtons.forEach(btn => btn.classList.remove("selected"));
+    button.classList.add("selected");
+    selectedCategory = button.dataset.category;
+  };
+});
+
+backToMapBtn.onclick = () => {
+  showScreen(mapScreen);
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 200);
+};
+
+sendBtn.onclick = () => {
+  if (!selectedCategory) {
+    alert("Scegli una categoria.");
+    return;
+  }
+
+  alert(
+    "Segnalazione pronta:\n\n" +
+    "Categoria: " + selectedCategory + "\n" +
+    "Lat: " + currentLat + "\n" +
+    "Lng: " + currentLng + "\n\n" +
+    "Nel prossimo passo salveremo tutto su Firebase."
+  );
 };
 </script>
 
