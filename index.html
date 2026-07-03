@@ -49,18 +49,18 @@ input{
   border-radius:16px;
 }
 
-.buttons{
-  margin-top:25px;
-  display:flex;
-  gap:15px;
-  justify-content:center;
-}
-
 button{
   border:none;
   padding:14px 22px;
   border-radius:12px;
   font-size:18px;
+}
+
+.buttons{
+  margin-top:25px;
+  display:flex;
+  gap:15px;
+  justify-content:center;
 }
 
 .secondary{
@@ -90,19 +90,10 @@ button{
   box-sizing:border-box;
 }
 
-#mapPanel h2{
-  margin:0 0 10px 0;
-  font-size:22px;
-}
-
 #confirmPositionBtn,
 #cancelMapBtn{
   width:90%;
   margin-top:10px;
-}
-
-#loadingText{
-  font-size:22px;
 }
 
 #categoryScreen{
@@ -114,6 +105,14 @@ button{
   width:100%;
   max-width:420px;
   margin:auto;
+}
+
+#aiBox{
+  background:white;
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:18px;
+  box-shadow:0 2px 10px rgba(0,0,0,.12);
 }
 
 .categoryBtn{
@@ -134,6 +133,10 @@ button{
 #backToMapBtn{
   width:100%;
   margin-top:12px;
+}
+
+#loadingText{
+  font-size:22px;
 }
 </style>
 </head>
@@ -169,28 +172,26 @@ button{
     <h2>Conferma posizione</h2>
     <p>Controlla che il punto sia corretto. Se necessario trascinalo.</p>
 
-    <button class="primary" id="confirmPositionBtn">
-      Conferma posizione
-    </button>
-
-    <button class="secondary" id="cancelMapBtn">
-      Annulla e rifai foto
-    </button>
+    <button class="primary" id="confirmPositionBtn">Conferma posizione</button>
+    <button class="secondary" id="cancelMapBtn">Annulla e rifai foto</button>
   </div>
 </section>
 
 <section id="categoryScreen" class="screen">
   <div id="categoryBox">
-    <h2>Che problema vuoi segnalare?</h2>
+    <div id="aiBox">
+      <strong>Analisi foto</strong>
+      <p id="aiSuggestion">Categoria suggerita: in attesa...</p>
+    </div>
 
-    <button class="categoryBtn" data-category="Buca stradale">🕳️ Buca stradale</button>
-    <button class="categoryBtn" data-category="Rifiuti abbandonati">🗑️ Rifiuti abbandonati</button>
-    <button class="categoryBtn" data-category="Lampione spento">💡 Lampione spento</button>
-    <button class="categoryBtn" data-category="Albero o ramo pericolante">🌳 Albero o ramo pericolante</button>
-    <button class="categoryBtn" data-category="Segnaletica danneggiata">🚧 Segnaletica danneggiata</button>
+    <h2>Conferma categoria</h2>
+
+    <button class="categoryBtn" data-category="Discarica a cielo aperto">🏚️ Discarica a cielo aperto</button>
+    <button class="categoryBtn" data-category="Materiali pericolosi">☣️ Materiali pericolosi</button>
     <button class="categoryBtn" data-category="Veicolo abbandonato">🚗 Veicolo abbandonato</button>
-    <button class="categoryBtn" data-category="Marciapiede impraticabile">🚶 Marciapiede impraticabile</button>
-    <button class="categoryBtn" data-category="Altro">➕ Altro</button>
+    <button class="categoryBtn" data-category="Albero o ramo pericolante">🌳 Albero / ramo pericolante</button>
+    <button class="categoryBtn" data-category="Sversamento sospetto">💧 Sversamento sospetto</button>
+    <button class="categoryBtn" data-category="Incendio">🔥 Incendio</button>
 
     <button class="primary" id="sendBtn">Invia segnalazione</button>
     <button class="secondary" id="backToMapBtn">Torna alla mappa</button>
@@ -215,6 +216,7 @@ const cancelMapBtn = document.getElementById("cancelMapBtn");
 const sendBtn = document.getElementById("sendBtn");
 const backToMapBtn = document.getElementById("backToMapBtn");
 const categoryButtons = document.querySelectorAll(".categoryBtn");
+const aiSuggestion = document.getElementById("aiSuggestion");
 
 let selectedPhoto = null;
 let selectedCategory = null;
@@ -248,6 +250,7 @@ camera.onchange = () => {
 retakeBtn.onclick = () => {
   camera.value = "";
   selectedPhoto = null;
+  selectedCategory = null;
   showScreen(startScreen);
 };
 
@@ -312,8 +315,24 @@ function initMap(lat, lng){
 }
 
 confirmPositionBtn.onclick = () => {
+  simulateAI();
   showScreen(categoryScreen);
 };
+
+function simulateAI(){
+  const suggested = "Discarica a cielo aperto";
+  selectedCategory = suggested;
+
+  aiSuggestion.textContent = "Categoria suggerita: " + suggested;
+
+  categoryButtons.forEach(btn => {
+    btn.classList.remove("selected");
+
+    if (btn.dataset.category === suggested) {
+      btn.classList.add("selected");
+    }
+  });
+}
 
 cancelMapBtn.onclick = () => {
   camera.value = "";
@@ -327,6 +346,7 @@ categoryButtons.forEach(button => {
     categoryButtons.forEach(btn => btn.classList.remove("selected"));
     button.classList.add("selected");
     selectedCategory = button.dataset.category;
+    aiSuggestion.textContent = "Categoria selezionata: " + selectedCategory;
   };
 });
 
