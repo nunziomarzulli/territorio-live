@@ -47,7 +47,6 @@ body{
   font-size:17px;
   opacity:.9;
 }
-
 #cameraBtn{
   margin-top:60px;
   width:230px;
@@ -56,13 +55,15 @@ body{
   border:3px solid rgba(255,255,255,.9);
   background:#2e7d32;
   color:white;
-  font-size:34px;
   box-shadow:0 0 35px rgba(99,199,77,.8);
-}
 
-#cameraBtn small{
-  font-size:30px;
-  font-weight:bold;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:42px;
+  font-weight:700;
+  cursor:pointer;
 }
 
 #openMapBtn{
@@ -206,12 +207,9 @@ button{
 
   <input type="file" accept="image/*" capture="environment" id="camera">
 
-  <button id="cameraBtn">
-    📷<br><br>
-    <small>SCATTA</small>
-  </button>
-
-  <p>Tocca il pianeta per iniziare</p>
+<button id="cameraBtn">
+SCATTA
+</button>
 
   <button id="openMapBtn">
     📍 APRI LA MAPPA
