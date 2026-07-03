@@ -1,28 +1,97 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Territorio Live</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Territorio Live</title>
+
+<style>
+
+body{
+    margin:0;
+    font-family:Arial,Helvetica,sans-serif;
+    background:#f5f5f5;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+#container{
+    text-align:center;
+}
+
+#cameraBtn{
+    width:220px;
+    height:220px;
+    border-radius:50%;
+    border:none;
+    background:#2e7d32;
+    color:white;
+    font-size:28px;
+    cursor:pointer;
+}
+
+#cameraBtn:active{
+    transform:scale(.97);
+}
+
+p{
+    margin-top:25px;
+    font-size:20px;
+}
+
+input{
+    display:none;
+}
+
+</style>
+
 </head>
 
 <body>
-  <h1>Territorio Live</h1>
-  <p>Segnala un problema del territorio in pochi secondi.</p>
 
-  <input type="file" accept="image/*" capture="environment" id="photoInput">
+<div id="container">
 
-  <p id="status">Scatta una foto per iniziare.</p>
+<input
+type="file"
+accept="image/*"
+capture="environment"
+id="camera">
 
-  <script>
-    const photoInput = document.getElementById("photoInput");
-    const statusText = document.getElementById("status");
+<button id="cameraBtn">
+📷<br><br>
+SCATTA
+</button>
 
-    photoInput.addEventListener("change", function () {
-      if (photoInput.files.length > 0) {
-        statusText.textContent = "Foto acquisita. Nel prossimo passo aggiungiamo GPS e mappa.";
-      }
-    });
-  </script>
+<p id="stato">
+Tocca il pulsante per iniziare
+</p>
+
+</div>
+
+<script>
+
+const camera=document.getElementById("camera");
+const button=document.getElementById("cameraBtn");
+const stato=document.getElementById("stato");
+
+button.onclick=()=>{
+
+camera.click();
+
+};
+
+camera.onchange=()=>{
+
+stato.innerHTML="✅ Foto acquisita";
+
+};
+
+</script>
+
 </body>
+
 </html>
