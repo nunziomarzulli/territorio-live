@@ -11,7 +11,6 @@
 body{
   margin:0;
   font-family:Arial,Helvetica,sans-serif;
-  background:#f5f5f5;
   height:100vh;
 }
 
@@ -25,23 +24,57 @@ body{
   box-sizing:border-box;
 }
 
-.active{
-  display:flex;
+.active{ display:flex; }
+
+#startScreen{
+  background:
+    linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.45)),
+    radial-gradient(circle at center, #1b5e20 0%, #061308 35%, #020402 100%);
+  color:white;
+  flex-direction:column;
+}
+
+.logo{
+  font-size:34px;
+  font-weight:800;
+  letter-spacing:1px;
+}
+
+.logo span{ color:#63c74d; }
+
+.subtitle{
+  margin-top:8px;
+  font-size:17px;
+  opacity:.9;
 }
 
 #cameraBtn{
-  width:220px;
-  height:220px;
+  margin-top:60px;
+  width:230px;
+  height:230px;
   border-radius:50%;
-  border:none;
+  border:3px solid rgba(255,255,255,.9);
   background:#2e7d32;
   color:white;
-  font-size:28px;
+  font-size:34px;
+  box-shadow:0 0 35px rgba(99,199,77,.8);
 }
 
-input{
-  display:none;
+#cameraBtn small{
+  font-size:30px;
+  font-weight:bold;
 }
+
+#openMapBtn{
+  margin-top:40px;
+  width:85%;
+  max-width:360px;
+  background:white;
+  color:#2e7d32;
+  font-weight:bold;
+}
+
+input{ display:none; }
 
 #previewImg{
   max-width:100%;
@@ -99,6 +132,7 @@ button{
 #categoryScreen{
   align-items:flex-start;
   overflow-y:auto;
+  background:#f5f5f5;
 }
 
 #categoryBox{
@@ -138,17 +172,50 @@ button{
 #loadingText{
   font-size:22px;
 }
+
+#exploreScreen{
+  padding:0;
+  flex-direction:column;
+}
+
+#exploreTopBar{
+  width:100%;
+  height:58px;
+  background:white;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 12px;
+  box-sizing:border-box;
+  border-bottom:1px solid #ddd;
+  z-index:999;
+}
+
+#exploreMap{
+  width:100%;
+  height:calc(100vh - 58px);
+}
 </style>
 </head>
 
 <body>
 
 <section id="startScreen" class="screen active">
-  <div>
-    <input type="file" accept="image/*" capture="environment" id="camera">
-    <button id="cameraBtn">📷<br><br>SCATTA</button>
-    <p>Tocca il pulsante per iniziare</p>
-  </div>
+  <div class="logo">TERRITORIO <span>LIVE</span></div>
+  <div class="subtitle">Il territorio parla attraverso i cittadini</div>
+
+  <input type="file" accept="image/*" capture="environment" id="camera">
+
+  <button id="cameraBtn">
+    📷<br><br>
+    <small>SCATTA</small>
+  </button>
+
+  <p>Tocca il pianeta per iniziare</p>
+
+  <button id="openMapBtn">
+    📍 APRI LA MAPPA
+  </button>
 </section>
 
 <section id="previewScreen" class="screen">
@@ -198,16 +265,30 @@ button{
   </div>
 </section>
 
+<section id="exploreScreen" class="screen">
+  <div id="exploreTopBar">
+    <button class="secondary" id="backHomeBtn">← Home</button>
+    <strong>Mappa segnalazioni</strong>
+    <button class="primary" id="newReportBtn">+</button>
+  </div>
+
+  <div id="exploreMap"></div>
+</section>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 const camera = document.getElementById("camera");
 const cameraBtn = document.getElementById("cameraBtn");
+const openMapBtn = document.getElementById("openMapBtn");
+
 const startScreen = document.getElementById("startScreen");
 const previewScreen = document.getElementById("previewScreen");
 const loadingScreen = document.getElementById("loadingScreen");
 const mapScreen = document.getElementById("mapScreen");
 const categoryScreen = document.getElementById("categoryScreen");
+const exploreScreen = document.getElementById("exploreScreen");
+
 const previewImg = document.getElementById("previewImg");
 const retakeBtn = document.getElementById("retakeBtn");
 const continueBtn = document.getElementById("continueBtn");
@@ -215,6 +296,9 @@ const confirmPositionBtn = document.getElementById("confirmPositionBtn");
 const cancelMapBtn = document.getElementById("cancelMapBtn");
 const sendBtn = document.getElementById("sendBtn");
 const backToMapBtn = document.getElementById("backToMapBtn");
+const backHomeBtn = document.getElementById("backHomeBtn");
+const newReportBtn = document.getElementById("newReportBtn");
+
 const categoryButtons = document.querySelectorAll(".categoryBtn");
 const aiSuggestion = document.getElementById("aiSuggestion");
 
@@ -222,6 +306,7 @@ let selectedPhoto = null;
 let selectedCategory = null;
 let map = null;
 let marker = null;
+let exploreMap = null;
 let currentLat = null;
 let currentLng = null;
 
@@ -231,6 +316,7 @@ function showScreen(screen){
   loadingScreen.classList.remove("active");
   mapScreen.classList.remove("active");
   categoryScreen.classList.remove("active");
+  exploreScreen.classList.remove("active");
   screen.classList.add("active");
 }
 
@@ -295,9 +381,7 @@ function initMap(lat, lng){
       attribution: "© OpenStreetMap"
     }).addTo(map);
 
-    marker = L.marker([lat, lng], {
-      draggable: true
-    }).addTo(map);
+    marker = L.marker([lat, lng], { draggable:true }).addTo(map);
 
     marker.on("dragend", function(){
       const pos = marker.getLatLng();
@@ -309,9 +393,7 @@ function initMap(lat, lng){
     marker.setLatLng([lat, lng]);
   }
 
-  setTimeout(() => {
-    map.invalidateSize();
-  }, 300);
+  setTimeout(() => map.invalidateSize(), 300);
 }
 
 confirmPositionBtn.onclick = () => {
@@ -327,7 +409,6 @@ function simulateAI(){
 
   categoryButtons.forEach(btn => {
     btn.classList.remove("selected");
-
     if (btn.dataset.category === suggested) {
       btn.classList.add("selected");
     }
@@ -370,6 +451,35 @@ sendBtn.onclick = () => {
     "Lng: " + currentLng + "\n\n" +
     "Nel prossimo passo salveremo tutto su Firebase."
   );
+};
+
+openMapBtn.onclick = () => {
+  showScreen(exploreScreen);
+
+  setTimeout(() => {
+    initExploreMap();
+  }, 200);
+};
+
+function initExploreMap(){
+  if (!exploreMap) {
+    exploreMap = L.map("exploreMap").setView([41.1171, 16.8719], 13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap"
+    }).addTo(exploreMap);
+  }
+
+  exploreMap.invalidateSize();
+}
+
+backHomeBtn.onclick = () => {
+  showScreen(startScreen);
+};
+
+newReportBtn.onclick = () => {
+  showScreen(startScreen);
 };
 </script>
 
