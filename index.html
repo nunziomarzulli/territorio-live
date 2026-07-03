@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Territorio Live</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+  <h1>Territorio Live</h1>
+  <p>Segnala un problema del territorio in pochi secondi.</p>
+
+  <input type="file" accept="image/*" capture="environment" id="photoInput">
+
+  <p id="status">Scatta una foto per iniziare.</p>
+
+  <script>
+    const photoInput = document.getElementById("photoInput");
+    const statusText = document.getElementById("status");
+
+    photoInput.addEventListener("change", function () {
+      if (photoInput.files.length > 0) {
+        statusText.textContent = "Foto acquisita. Nel prossimo passo aggiungiamo GPS e mappa.";
+      }
+    });
+  </script>
+</body>
+</html>
