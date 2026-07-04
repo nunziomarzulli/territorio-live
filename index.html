@@ -40,6 +40,7 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 #exploreTopBar{width:100%;height:58px;background:white;display:flex;align-items:center;justify-content:space-between;padding:0 12px;box-sizing:border-box;border-bottom:1px solid #ddd;z-index:999}
 #exploreMap{width:100%;height:calc(100vh - 58px)}
 .popup-img{width:180px;max-height:140px;object-fit:cover;border-radius:10px;margin-top:8px}
+.popup-box{text-align:left;font-size:14px}
 </style>
 </head>
 
@@ -50,8 +51,11 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
     <img src="logo-tl.png.png" alt="Territorio Live Logo" class="logo-img">
     <div>TERRITORIO <span>LIVE</span></div>
   </div>
+
   <div class="subtitle">Il territorio parla attraverso i cittadini</div>
+
   <input type="file" accept="image/*" capture="environment" id="camera">
+
   <button id="cameraBtn">SCATTA</button>
   <button id="openMapBtn">📍 APRI LA MAPPA</button>
 </section>
@@ -72,9 +76,11 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 
 <section id="mapScreen" class="screen">
   <div id="map"></div>
+
   <div id="mapPanel">
     <h2>Conferma posizione</h2>
     <p>Controlla che il punto sia corretto. Se necessario trascinalo.</p>
+
     <button class="primary" id="confirmPositionBtn">Conferma posizione</button>
     <button class="secondary" id="cancelMapBtn">Annulla e rifai foto</button>
   </div>
@@ -107,6 +113,7 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
     <strong>Mappa segnalazioni</strong>
     <button class="primary" id="newReportBtn">+</button>
   </div>
+
   <div id="exploreMap"></div>
 </section>
 
@@ -183,7 +190,9 @@ function showScreen(screen){
   screen.classList.add("active");
 }
 
-cameraBtn.onclick = () => camera.click();
+cameraBtn.onclick = () => {
+  camera.click();
+};
 
 camera.onchange = async () => {
   const file = camera.files[0];
@@ -191,6 +200,7 @@ camera.onchange = async () => {
 
   selectedPhoto = file;
   compressedPhoto = await compressImage(file);
+
   previewImg.src = compressedPhoto;
   showScreen(previewScreen);
 };
@@ -213,14 +223,22 @@ continueBtn.onclick = () => {
     position => {
       currentLat = position.coords.latitude;
       currentLng = position.coords.longitude;
+
       showScreen(mapScreen);
-      setTimeout(() => initMap(currentLat, currentLng), 200);
+
+      setTimeout(() => {
+        initMap(currentLat, currentLng);
+      }, 200);
     },
     () => {
       alert("Non riesco a rilevare la posizione. Controlla i permessi GPS.");
       showScreen(previewScreen);
     },
-    { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
   );
 };
 
@@ -229,8 +247,8 @@ function initMap(lat, lng){
     map = L.map("map").setView([lat, lng], 18);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom:19,
-      attribution:"© OpenStreetMap"
+      maxZoom: 19,
+      attribution: "© OpenStreetMap"
     }).addTo(map);
 
     marker = L.marker([lat, lng], { draggable:true }).addTo(map);
@@ -240,6 +258,7 @@ function initMap(lat, lng){
       currentLat = pos.lat;
       currentLng = pos.lng;
     });
+
   } else {
     map.setView([lat, lng], 18);
     marker.setLatLng([lat, lng]);
@@ -261,7 +280,9 @@ function simulateAI(){
 
   categoryButtons.forEach(btn => {
     btn.classList.remove("selected");
-    if (btn.dataset.category === suggested) btn.classList.add("selected");
+    if (btn.dataset.category === suggested) {
+      btn.classList.add("selected");
+    }
   });
 }
 
@@ -281,7 +302,9 @@ categoryButtons.forEach(button => {
 
 backToMapBtn.onclick = () => {
   showScreen(mapScreen);
-  setTimeout(() => { if (map) map.invalidateSize(); }, 200);
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 200);
 };
 
 sendBtn.onclick = async () => {
@@ -341,8 +364,8 @@ function initExploreMap(){
     exploreMap = L.map("exploreMap").setView([41.1171, 16.8719], 13);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom:19,
-      attribution:"© OpenStreetMap"
+      maxZoom: 19,
+      attribution: "© OpenStreetMap"
     }).addTo(exploreMap);
   }
 
@@ -352,7 +375,10 @@ function initExploreMap(){
 async function loadReportsFromFirestore(){
   if (!exploreMap) return;
 
-  exploreMarkers.forEach(m => exploreMap.removeLayer(m));
+  exploreMarkers.forEach(markerItem => {
+    exploreMap.removeLayer(markerItem);
+  });
+
   exploreMarkers = [];
 
   try {
@@ -361,24 +387,28 @@ async function loadReportsFromFirestore(){
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
+
       if (!data.lat || !data.lng) return;
 
-      const id = docSnap.id;
-      const marker = L.marker([data.lat, data.lng]).addTo(exploreMap);
-
+      const reportId = docSnap.id;
       const dateText = formatDate(data.createdAt);
 
-      marker.bindPopup(`
-       <strong>${escapeHtml(data.categoria || "Segnalazione")}</strong><br>
-        Stato: ${escapeHtml(data.stato || "aperta")}<br>
-        Conferme: ${data.conferme || 0}<br>
-        Data: ${dateText}<br>
-        ${data.immagineBase64 ? `<img class="popup-img" src="${data.immagineBase64}">` : ""}
-        <br>
-        <button class="danger" onclick="deleteReport('${id}')">Elimina segnalazione</button>
-      `);
+      const markerItem = L.marker([data.lat, data.lng]).addTo(exploreMap);
 
-      exploreMarkers.push(marker);
+      const popupHtml = `
+        <div class="popup-box">
+          <strong>${escapeHtml(data.categoria || "Segnalazione")}</strong><br>
+          Stato: ${escapeHtml(data.stato || "aperta")}<br>
+          Conferme: ${Number(data.conferme || 0)}<br>
+          Data: ${dateText}<br>
+          ${data.immagineBase64 ? `<img class="popup-img" src="${data.immagineBase64}" alt="Foto segnalazione">` : ""}
+          <br>
+          <button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>
+        </div>
+      `;
+
+      markerItem.bindPopup(popupHtml);
+      exploreMarkers.push(markerItem);
     });
 
   } catch (error) {
@@ -387,21 +417,24 @@ async function loadReportsFromFirestore(){
   }
 }
 
-window.deleteReport = async function(id){
-  const ok = confirm("Vuoi eliminare questa segnalazione?");
-  if (!ok) return;
+window.deleteReport = async function(reportId){
+  const conferma = confirm("Vuoi eliminare questa segnalazione?");
+  if (!conferma) return;
 
   try {
-    await deleteDoc(doc(db, "segnalazioni", id));
+    await deleteDoc(doc(db, "segnalazioni", reportId));
     alert("Segnalazione eliminata.");
     await loadReportsFromFirestore();
+
   } catch (error) {
     console.error("Errore eliminazione:", error);
-    alert("Errore eliminazione. Devi abilitare delete nelle regole Firestore.");
+    alert("Errore eliminazione. Controlla le regole Firestore.");
   }
 };
 
-backHomeBtn.onclick = () => showScreen(startScreen);
+backHomeBtn.onclick = () => {
+  showScreen(startScreen);
+};
 
 newReportBtn.onclick = () => {
   resetReport();
@@ -415,6 +448,7 @@ function resetReport(){
   selectedCategory = null;
   currentLat = null;
   currentLng = null;
+
   categoryButtons.forEach(btn => btn.classList.remove("selected"));
   aiSuggestion.textContent = "Categoria suggerita: in attesa...";
 }
@@ -429,15 +463,16 @@ function compressImage(file){
       img.onload = () => {
         const canvas = document.createElement("canvas");
         const maxWidth = 800;
-        const ratio = maxWidth / img.width;
+        const scale = maxWidth / img.width;
 
         canvas.width = maxWidth;
-        canvas.height = img.height * ratio;
+        canvas.height = img.height * scale;
 
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        resolve(canvas.toDataURL("image/jpeg", 0.55));
+        const base64 = canvas.toDataURL("image/jpeg", 0.55);
+        resolve(base64);
       };
 
       img.onerror = reject;
@@ -450,26 +485,28 @@ function compressImage(file){
 }
 
 function formatDate(timestamp){
-  if (!timestamp || !timestamp.toDate) return "non disponibile";
+  if (!timestamp || !timestamp.toDate) {
+    return "non disponibile";
+  }
 
   const date = timestamp.toDate();
 
   return date.toLocaleString("it-IT", {
-    day:"2-digit",
-    month:"2-digit",
-    year:"numeric",
-    hour:"2-digit",
-    minute:"2-digit"
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
   });
 }
 
 function escapeHtml(text){
   return String(text)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 </script>
 
