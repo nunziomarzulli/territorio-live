@@ -369,7 +369,7 @@ async function loadReportsFromFirestore(){
       const dateText = formatDate(data.createdAt);
 
       marker.bindPopup(`
-        <strong>${escapeHtml(data.categoria || "Segnalazione")}</strong><br>
+       <strong>${escapeHtml(data.categoria || "Segnalazione")}</strong><br>
         Stato: ${escapeHtml(data.stato || "aperta")}<br>
         Conferme: ${data.conferme || 0}<br>
         Data: ${dateText}<br>
