@@ -130,7 +130,10 @@ import {
   orderBy,
   serverTimestamp,
   deleteDoc,
-  doc
+doc,
+updateDoc,
+increment,
+arrayUnion
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -407,11 +410,13 @@ async function loadReportsFromFirestore(){
         <div class="popup-box">
           <strong>${escapeHtml(data.categoria || "Segnalazione")}</strong><br>
           Stato: ${escapeHtml(data.stato || "aperta")}<br>
-          Conferme: ${Number(data.conferme || 0)}<br>
-          Data: ${dateText}<br>
-          ${data.immagineBase64 ? `<img class="popup-img" src="${data.immagineBase64}" alt="Foto segnalazione">` : ""}
-          <br>
-        ${data.ownerId === ownerId ? `<button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>` : ""}
+        Conferme: ${Number(data.conferme || 0)}<br>
+Data: ${dateText}<br>
+${data.immagineBase64 ? `<img class="popup-img" src="${data.immagineBase64}" alt="Foto segnalazione">` : ""}
+<br>
+${data.ownerId !== ownerId && !(data.confirmedBy || []).includes(ownerId) ? `<button class="primary" onclick="window.confirmReport('${reportId}')">Conferma segnalazione</button>` : ""}
+${data.ownerId !== ownerId && (data.confirmedBy || []).includes(ownerId) ? `<p><strong>Segnalazione già confermata da questo dispositivo</strong></p>` : ""}
+${data.ownerId === ownerId ? `<button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>` : ""}
 </div>
         </div>
       `;
@@ -440,7 +445,32 @@ window.deleteReport = async function(reportId){
     alert("Errore eliminazione. Controlla le regole Firestore.");
   }
 };
+window.confirmReport = async function(reportId){
 
+    try{
+
+        await updateDoc(doc(db,"segnalazioni",reportId),{
+
+            conferme: increment(1),
+
+            confirmedBy: arrayUnion(ownerId)
+
+        });
+
+        alert("Segnalazione confermata.");
+
+        await loadReportsFromFirestore();
+
+    }catch(error){
+
+        console.error(error);
+
+        alert("Errore durante la conferma.");
+
+    }
+
+};
+  
 backHomeBtn.onclick = () => {
   showScreen(startScreen);
 };
