@@ -37,9 +37,17 @@ body{
 }
 
 .logo{
-  font-size:34px;
-  font-weight:800;
-  letter-spacing:1px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    font-size:34px;
+    font-weight:800;
+    letter-spacing:1px;
+}
+  .logo-img{
+    width:120px;
+    height:auto;
+    margin-bottom:18px;
 }
 
 .logo span{
@@ -207,7 +215,10 @@ button{
 <body>
 
 <section id="startScreen" class="screen active">
-  <div class="logo">TERRITORIO <span>LIVE</span></div>
+ <div class="logo">
+    <img src="logo-tl.png.png" alt="Territorio Live Logo" class="logo-img">
+    <div>TERRITORIO <span>LIVE</span></div>
+</div>
   <div class="subtitle">Il territorio parla attraverso i cittadini</div>
 
   <input type="file" accept="image/*" capture="environment" id="camera">
