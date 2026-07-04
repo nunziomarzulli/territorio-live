@@ -180,6 +180,13 @@ let exploreMarkers = [];
 let currentLat = null;
 let currentLng = null;
 
+let ownerId = localStorage.getItem("territorioLiveOwnerId");
+
+if (!ownerId) {
+    ownerId = crypto.randomUUID();
+    localStorage.setItem("territorioLiveOwnerId", ownerId);
+}
+
 function showScreen(screen){
   startScreen.classList.remove("active");
   previewScreen.classList.remove("active");
@@ -333,8 +340,9 @@ sendBtn.onclick = async () => {
       lng: currentLng,
       immagineBase64: compressedPhoto,
       stato: "aperta",
-      conferme: 0,
-      createdAt: serverTimestamp()
+     conferme: 0,
+ownerId: ownerId,
+createdAt: serverTimestamp()
     });
 
     alert("Segnalazione inviata correttamente.");
@@ -403,7 +411,7 @@ async function loadReportsFromFirestore(){
           Data: ${dateText}<br>
           ${data.immagineBase64 ? `<img class="popup-img" src="${data.immagineBase64}" alt="Foto segnalazione">` : ""}
           <br>
-          <button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>
+         ${data.ownerId === ownerId ? `<button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>` : ""}
         </div>
       `;
 
