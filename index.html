@@ -411,7 +411,8 @@ async function loadReportsFromFirestore(){
           Data: ${dateText}<br>
           ${data.immagineBase64 ? `<img class="popup-img" src="${data.immagineBase64}" alt="Foto segnalazione">` : ""}
           <br>
-         ${data.ownerId === ownerId ? `<button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>` : ""}
+        ${data.ownerId === ownerId ? `<button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>` : ""}
+</div>
         </div>
       `;
 
