@@ -1,499 +1,454 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Territorio Live</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Territorio Live</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  
-<style>
-body{
-  margin:0;
-  font-family:Arial,Helvetica,sans-serif;
-  height:100vh;
-}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-.screen{
-  display:none;
-  height:100vh;
-  justify-content:center;
-  align-items:center;
-  text-align:center;
-  padding:20px;
-  box-sizing:border-box;
-}
+  <style>
+    * { box-sizing: border-box; }
 
-.active{
-  display:flex;
-}
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #07140d;
+      color: white;
+    }
 
-#startScreen{
-  background:
-    linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.45)),
-    radial-gradient(circle at center, #1b5e20 0%, #061308 35%, #020402 100%);
-  color:white;
-  flex-direction:column;
-}
+    .screen {
+      display: none;
+      min-height: 100vh;
+      padding: 20px;
+    }
 
-.logo{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    font-size:34px;
-    font-weight:800;
-    letter-spacing:1px;
-}
- .logo-img{
-    width:220px;
-    height:auto;
-    margin-bottom:22px;
-}
+    .active { display: block; }
 
-.logo span{
-  color:#63c74d;
-}
+    .center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
 
-.subtitle{
-  margin-top:8px;
-  font-size:17px;
-  opacity:.9;
-}
+    .logo {
+      width: 180px;
+      margin-bottom: 20px;
+    }
 
-#cameraBtn{
-  margin-top:60px;
-  width:230px;
-  height:230px;
-  border-radius:50%;
-  border:3px solid rgba(255,255,255,.9);
-  background:#2e7d32;
-  color:white;
-  box-shadow:0 0 35px rgba(99,199,77,.8);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  font-size:42px;
-  font-weight:700;
-  cursor:pointer;
-}
+    .planet {
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      border: 6px solid #1cff72;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle, #0d4022, #07140d 70%);
+      box-shadow: 0 0 35px #1cff72;
+      margin: 20px auto;
+    }
 
-#openMapBtn{
-  margin-top:40px;
-  width:85%;
-  max-width:360px;
-  background:white;
-  color:#2e7d32;
-  font-weight:bold;
-}
+    button {
+      border: none;
+      border-radius: 14px;
+      padding: 15px 22px;
+      margin: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      background: #1cff72;
+      color: #07140d;
+    }
 
-input{
-  display:none;
-}
+    .secondary {
+      background: transparent;
+      color: #1cff72;
+      border: 2px solid #1cff72;
+    }
 
-#previewImg{
-  max-width:100%;
-  max-height:65vh;
-  border-radius:16px;
-}
+    .danger {
+      background: #ff5252;
+      color: white;
+    }
 
-button{
-  border:none;
-  padding:14px 22px;
-  border-radius:12px;
-  font-size:18px;
-}
+    .card {
+      background: #102216;
+      border: 1px solid #1cff72;
+      border-radius: 18px;
+      padding: 16px;
+      margin: 14px 0;
+    }
 
-.buttons{
-  margin-top:25px;
-  display:flex;
-  gap:15px;
-  justify-content:center;
-}
+    img.preview {
+      width: 100%;
+      max-height: 320px;
+      object-fit: cover;
+      border-radius: 16px;
+      border: 2px solid #1cff72;
+    }
 
-.secondary{
-  background:#ddd;
-  color:#222;
-}
+    select, textarea, input {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      margin-top: 10px;
+      font-size: 16px;
+    }
 
-.primary{
-  background:#2e7d32;
-  color:white;
-}
+    textarea { min-height: 90px; }
 
-#mapScreen{
-  padding:0;
-  flex-direction:column;
-}
+    #map, #confirmMap {
+      width: 100%;
+      height: 420px;
+      border-radius: 18px;
+      margin-top: 14px;
+    }
 
-#map{
-  width:100%;
-  height:62vh;
-}
+    .small {
+      font-size: 14px;
+      opacity: 0.8;
+    }
 
-#mapPanel{
-  width:100%;
-  background:white;
-  padding:14px;
-  box-sizing:border-box;
-}
-
-#confirmPositionBtn,
-#cancelMapBtn{
-  width:90%;
-  margin-top:10px;
-}
-
-#categoryScreen{
-  align-items:flex-start;
-  overflow-y:auto;
-  background:#f5f5f5;
-}
-
-#categoryBox{
-  width:100%;
-  max-width:420px;
-  margin:auto;
-}
-
-#aiBox{
-  background:white;
-  border-radius:14px;
-  padding:14px;
-  margin-bottom:18px;
-  box-shadow:0 2px 10px rgba(0,0,0,.12);
-}
-
-.categoryBtn{
-  width:100%;
-  margin:7px 0;
-  background:white;
-  border:1px solid #ddd;
-  color:#222;
-  text-align:left;
-}
-
-.categoryBtn.selected{
-  background:#2e7d32;
-  color:white;
-}
-
-#sendBtn,
-#backToMapBtn{
-  width:100%;
-  margin-top:12px;
-}
-
-#loadingText{
-  font-size:22px;
-}
-
-#exploreScreen{
-  padding:0;
-  flex-direction:column;
-}
-
-#exploreTopBar{
-  width:100%;
-  height:58px;
-  background:white;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 12px;
-  box-sizing:border-box;
-  border-bottom:1px solid #ddd;
-  z-index:999;
-}
-
-#exploreMap{
-  width:100%;
-  height:calc(100vh - 58px);
-}
-</style>
+    .report-img {
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 8px;
+    }
+  </style>
 </head>
 
 <body>
 
-<section id="startScreen" class="screen active">
- <div class="logo">
-    <img src="logo-tl.png.png" alt="Territorio Live Logo" class="logo-img">
-    <div>TERRITORIO <span>LIVE</span></div>
-</div>
-  <div class="subtitle">Il territorio parla attraverso i cittadini</div>
+  <section id="homeScreen" class="screen active">
+    <div class="center">
+      <img src="logo-tl.png.png" class="logo" alt="Territorio Live" />
 
-  <input type="file" accept="image/*" capture="environment" id="camera">
+      <div class="planet">
+        <button onclick="startCamera()">SCATTA</button>
+      </div>
 
-  <button id="cameraBtn">SCATTA</button>
+      <button class="secondary" onclick="openMap()">APRI LA MAPPA</button>
 
-  <button id="openMapBtn">
-    📍 APRI LA MAPPA
-  </button>
-</section>
-
-<section id="previewScreen" class="screen">
-  <div>
-    <img id="previewImg" alt="Anteprima foto">
-    <div class="buttons">
-      <button class="secondary" id="retakeBtn">Rifai</button>
-      <button class="primary" id="continueBtn">Continua</button>
+      <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden />
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="loadingScreen" class="screen">
-  <p id="loadingText">📍 Rilevamento posizione...</p>
-</section>
+  <section id="previewScreen" class="screen">
+    <h2>Anteprima segnalazione</h2>
 
-<section id="mapScreen" class="screen">
-  <div id="map"></div>
-
-  <div id="mapPanel">
-    <h2>Conferma posizione</h2>
-    <p>Controlla che il punto sia corretto. Se necessario trascinalo.</p>
-
-    <button class="primary" id="confirmPositionBtn">Conferma posizione</button>
-    <button class="secondary" id="cancelMapBtn">Annulla e rifai foto</button>
-  </div>
-</section>
-
-<section id="categoryScreen" class="screen">
-  <div id="categoryBox">
-    <div id="aiBox">
-      <strong>Analisi foto</strong>
-      <p id="aiSuggestion">Categoria suggerita: in attesa...</p>
+    <div class="card">
+      <img id="photoPreview" class="preview" />
+      <p id="gpsStatus" class="small">Recupero posizione GPS...</p>
     </div>
 
-    <h2>Conferma categoria</h2>
+    <div id="confirmMap"></div>
 
-    <button class="categoryBtn" data-category="Discarica a cielo aperto">🏚️ Discarica a cielo aperto</button>
-    <button class="categoryBtn" data-category="Materiali pericolosi">☣️ Materiali pericolosi</button>
-    <button class="categoryBtn" data-category="Veicolo abbandonato">🚗 Veicolo abbandonato</button>
-    <button class="categoryBtn" data-category="Albero o ramo pericolante">🌳 Albero / ramo pericolante</button>
-    <button class="categoryBtn" data-category="Sversamento sospetto">💧 Sversamento sospetto</button>
-    <button class="categoryBtn" data-category="Incendio">🔥 Incendio</button>
+    <button onclick="goToCategory()">CONFERMA POSIZIONE</button>
+    <button class="secondary" onclick="goHome()">ANNULLA</button>
+  </section>
 
-    <button class="primary" id="sendBtn">Invia segnalazione</button>
-    <button class="secondary" id="backToMapBtn">Torna alla mappa</button>
-  </div>
-</section>
+  <section id="categoryScreen" class="screen">
+    <h2>Categoria segnalazione</h2>
 
-<section id="exploreScreen" class="screen">
-  <div id="exploreTopBar">
-    <button class="secondary" id="backHomeBtn">← Home</button>
-    <strong>Mappa segnalazioni</strong>
-    <button class="primary" id="newReportBtn">+</button>
-  </div>
+    <div class="card">
+      <p class="small">Suggerimento AI simulato:</p>
+      <h3 id="aiSuggestion">Analisi immagine...</h3>
+    </div>
 
-  <div id="exploreMap"></div>
-</section>
+    <select id="categorySelect">
+      <option value="">Seleziona categoria</option>
+      <option>Discarica abusiva</option>
+      <option>Materiali pericolosi</option>
+      <option>Veicolo abbandonato o sospetto</option>
+      <option>Buca pericolosa</option>
+      <option>Lampione spento / illuminazione guasta</option>
+      <option>Albero o ramo pericolante</option>
+      <option>Segnaletica danneggiata</option>
+      <option>Arredo urbano danneggiato</option>
+      <option>Altro</option>
+    </select>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <textarea id="noteInput" placeholder="Aggiungi una breve descrizione facoltativa"></textarea>
 
-<script>
-const camera = document.getElementById("camera");
-const cameraBtn = document.getElementById("cameraBtn");
-const openMapBtn = document.getElementById("openMapBtn");
+    <button onclick="sendReport()">INVIA SEGNALAZIONE</button>
+    <button class="secondary" onclick="goHome()">ANNULLA</button>
+  </section>
 
-const startScreen = document.getElementById("startScreen");
-const previewScreen = document.getElementById("previewScreen");
-const loadingScreen = document.getElementById("loadingScreen");
-const mapScreen = document.getElementById("mapScreen");
-const categoryScreen = document.getElementById("categoryScreen");
-const exploreScreen = document.getElementById("exploreScreen");
+  <section id="mapScreen" class="screen">
+    <h2>Mappa Territorio Live</h2>
+    <button class="secondary" onclick="goHome()">TORNA ALLA HOME</button>
+    <div id="map"></div>
+  </section>
 
-const previewImg = document.getElementById("previewImg");
-const retakeBtn = document.getElementById("retakeBtn");
-const continueBtn = document.getElementById("continueBtn");
-const confirmPositionBtn = document.getElementById("confirmPositionBtn");
-const cancelMapBtn = document.getElementById("cancelMapBtn");
-const sendBtn = document.getElementById("sendBtn");
-const backToMapBtn = document.getElementById("backToMapBtn");
-const backHomeBtn = document.getElementById("backHomeBtn");
-const newReportBtn = document.getElementById("newReportBtn");
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-const categoryButtons = document.querySelectorAll(".categoryBtn");
-const aiSuggestion = document.getElementById("aiSuggestion");
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      getDocs,
+      serverTimestamp,
+      query,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
-let selectedPhoto = null;
-let selectedCategory = null;
-let map = null;
-let marker = null;
-let exploreMap = null;
-let currentLat = null;
-let currentLng = null;
+    const firebaseConfig = {
+      apiKey: "AIzaSyAhAJOjQSXmzvo2QnuhB4EIDTK88DCHgm0",
+      authDomain: "territorio-live.firebaseapp.com",
+      projectId: "territorio-live",
+      storageBucket: "territorio-live.firebasestorage.app",
+      messagingSenderId: "1014933311241",
+      appId: "1:1014933311241:web:21cd7b52882677ede58dd8",
+      measurementId: "G-96WJ75QWLW"
+    };
 
-function showScreen(screen){
-  startScreen.classList.remove("active");
-  previewScreen.classList.remove("active");
-  loadingScreen.classList.remove("active");
-  mapScreen.classList.remove("active");
-  categoryScreen.classList.remove("active");
-  exploreScreen.classList.remove("active");
-  screen.classList.add("active");
-}
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-cameraBtn.onclick = () => {
-  camera.click();
-};
+    let compressedImage = "";
+    let currentLat = null;
+    let currentLng = null;
+    let confirmMap = null;
+    let mainMap = null;
+    let mainMarkers = [];
 
-camera.onchange = () => {
-  const file = camera.files[0];
-  if (!file) return;
+    const screens = {
+      home: document.getElementById("homeScreen"),
+      preview: document.getElementById("previewScreen"),
+      category: document.getElementById("categoryScreen"),
+      map: document.getElementById("mapScreen")
+    };
 
-  selectedPhoto = file;
-  previewImg.src = URL.createObjectURL(file);
-  showScreen(previewScreen);
-};
+    const cameraInput = document.getElementById("cameraInput");
+    const photoPreview = document.getElementById("photoPreview");
+    const gpsStatus = document.getElementById("gpsStatus");
+    const categorySelect = document.getElementById("categorySelect");
+    const noteInput = document.getElementById("noteInput");
+    const aiSuggestion = document.getElementById("aiSuggestion");
 
-retakeBtn.onclick = () => {
-  camera.value = "";
-  selectedPhoto = null;
-  selectedCategory = null;
-  showScreen(startScreen);
-};
+    window.startCamera = function () {
+      cameraInput.click();
+    };
 
-continueBtn.onclick = () => {
-  showScreen(loadingScreen);
+    cameraInput.addEventListener("change", async function () {
+      const file = cameraInput.files[0];
+      if (!file) return;
 
-  if (!navigator.geolocation) {
-    alert("GPS non disponibile su questo dispositivo.");
-    showScreen(previewScreen);
-    return;
-  }
+      compressedImage = await compressImage(file);
+      photoPreview.src = compressedImage;
 
-  navigator.geolocation.getCurrentPosition(
-    position => {
-      currentLat = position.coords.latitude;
-      currentLng = position.coords.longitude;
-
-      showScreen(mapScreen);
-
-      setTimeout(() => {
-        initMap(currentLat, currentLng);
-      }, 200);
-    },
-    error => {
-      alert("Non riesco a rilevare la posizione. Controlla i permessi GPS.");
-      showScreen(previewScreen);
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
-    }
-  );
-};
-
-function initMap(lat, lng){
-  if (!map) {
-    map = L.map("map").setView([lat, lng], 18);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "© OpenStreetMap"
-    }).addTo(map);
-
-    marker = L.marker([lat, lng], { draggable:true }).addTo(map);
-
-    marker.on("dragend", function(){
-      const pos = marker.getLatLng();
-      currentLat = pos.lat;
-      currentLng = pos.lng;
+      showScreen("preview");
+      getGpsPosition();
+      simulateAI();
     });
-  } else {
-    map.setView([lat, lng], 18);
-    marker.setLatLng([lat, lng]);
-  }
 
-  setTimeout(() => map.invalidateSize(), 300);
-}
-
-confirmPositionBtn.onclick = () => {
-  simulateAI();
-  showScreen(categoryScreen);
-};
-
-function simulateAI(){
-  const suggested = "Discarica a cielo aperto";
-  selectedCategory = suggested;
-
-  aiSuggestion.textContent = "Categoria suggerita: " + suggested;
-
-  categoryButtons.forEach(btn => {
-    btn.classList.remove("selected");
-    if (btn.dataset.category === suggested) {
-      btn.classList.add("selected");
+    function showScreen(name) {
+      Object.values(screens).forEach(screen => screen.classList.remove("active"));
+      screens[name].classList.add("active");
     }
-  });
-}
 
-cancelMapBtn.onclick = () => {
-  camera.value = "";
-  selectedPhoto = null;
-  selectedCategory = null;
-  showScreen(startScreen);
-};
+    window.goHome = function () {
+      showScreen("home");
+      resetForm();
+    };
 
-categoryButtons.forEach(button => {
-  button.onclick = () => {
-    categoryButtons.forEach(btn => btn.classList.remove("selected"));
-    button.classList.add("selected");
-    selectedCategory = button.dataset.category;
-    aiSuggestion.textContent = "Categoria selezionata: " + selectedCategory;
-  };
-});
+    function resetForm() {
+      cameraInput.value = "";
+      categorySelect.value = "";
+      noteInput.value = "";
+      gpsStatus.textContent = "Recupero posizione GPS...";
+    }
 
-backToMapBtn.onclick = () => {
-  showScreen(mapScreen);
-  setTimeout(() => {
-    if (map) map.invalidateSize();
-  }, 200);
-};
+    function compressImage(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
 
-sendBtn.onclick = () => {
-  if (!selectedCategory) {
-    alert("Scegli una categoria.");
-    return;
-  }
+        reader.onload = function (event) {
+          const img = new Image();
 
-  alert(
-    "Segnalazione pronta:\n\n" +
-    "Categoria: " + selectedCategory + "\n" +
-    "Lat: " + currentLat + "\n" +
-    "Lng: " + currentLng + "\n\n" +
-    "Nel prossimo passo salveremo tutto su Firebase."
-  );
-};
+          img.onload = function () {
+            const canvas = document.createElement("canvas");
+            const maxWidth = 800;
+            const scale = maxWidth / img.width;
 
-openMapBtn.onclick = () => {
-  showScreen(exploreScreen);
+            canvas.width = maxWidth;
+            canvas.height = img.height * scale;
 
-  setTimeout(() => {
-    initExploreMap();
-  }, 200);
-};
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-function initExploreMap(){
-  if (!exploreMap) {
-    exploreMap = L.map("exploreMap").setView([41.1171, 16.8719], 13);
+            const base64 = canvas.toDataURL("image/jpeg", 0.55);
+            resolve(base64);
+          };
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "© OpenStreetMap"
-    }).addTo(exploreMap);
-  }
+          img.src = event.target.result;
+        };
 
-  exploreMap.invalidateSize();
-}
+        reader.readAsDataURL(file);
+      });
+    }
 
-backHomeBtn.onclick = () => {
-  showScreen(startScreen);
-};
+    function getGpsPosition() {
+      if (!navigator.geolocation) {
+        gpsStatus.textContent = "GPS non disponibile su questo dispositivo.";
+        return;
+      }
 
-newReportBtn.onclick = () => {
-  showScreen(startScreen);
-};
-</script>
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          currentLat = position.coords.latitude;
+          currentLng = position.coords.longitude;
+
+          gpsStatus.textContent = `Posizione trovata: ${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}`;
+          loadConfirmMap();
+        },
+        () => {
+          gpsStatus.textContent = "Impossibile recuperare la posizione. Attiva il GPS.";
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 12000,
+          maximumAge: 0
+        }
+      );
+    }
+
+    function loadConfirmMap() {
+      setTimeout(() => {
+        if (confirmMap) {
+          confirmMap.remove();
+        }
+
+        confirmMap = L.map("confirmMap").setView([currentLat, currentLng], 17);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap"
+        }).addTo(confirmMap);
+
+        L.marker([currentLat, currentLng]).addTo(confirmMap)
+          .bindPopup("Posizione segnalazione")
+          .openPopup();
+      }, 200);
+    }
+
+    window.goToCategory = function () {
+      if (!currentLat || !currentLng) {
+        alert("Posizione GPS non ancora disponibile.");
+        return;
+      }
+
+      showScreen("category");
+    };
+
+    function simulateAI() {
+      const suggestions = [
+        "Possibile rifiuto abbandonato",
+        "Possibile arredo urbano danneggiato",
+        "Possibile problema stradale",
+        "Possibile segnalazione ambientale"
+      ];
+
+      aiSuggestion.textContent = suggestions[Math.floor(Math.random() * suggestions.length)];
+    }
+
+    window.sendReport = async function () {
+      const category = categorySelect.value;
+
+      if (!compressedImage) {
+        alert("Manca la foto.");
+        return;
+      }
+
+      if (!currentLat || !currentLng) {
+        alert("Manca la posizione GPS.");
+        return;
+      }
+
+      if (!category) {
+        alert("Seleziona una categoria.");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "segnalazioni"), {
+          categoria: category,
+          descrizione: noteInput.value.trim(),
+          immagineBase64: compressedImage,
+          lat: currentLat,
+          lng: currentLng,
+          stato: "aperta",
+          conferme: 0,
+          dataCreazione: serverTimestamp()
+        });
+
+        alert("Segnalazione inviata.");
+        goHome();
+
+      } catch (error) {
+        console.error(error);
+        alert("Errore durante l'invio. Controlla le regole Firestore.");
+      }
+    };
+
+    window.openMap = async function () {
+      showScreen("map");
+
+      setTimeout(async () => {
+        if (!mainMap) {
+          mainMap = L.map("map").setView([41.1171, 16.8719], 13);
+
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap"
+          }).addTo(mainMap);
+        }
+
+        mainMap.invalidateSize();
+        await loadReports();
+      }, 200);
+    };
+
+    async function loadReports() {
+      mainMarkers.forEach(marker => marker.remove());
+      mainMarkers = [];
+
+      const q = query(collection(db, "segnalazioni"), orderBy("dataCreazione", "desc"));
+      const snapshot = await getDocs(q);
+
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+
+        if (!data.lat || !data.lng) return;
+
+        const marker = L.marker([data.lat, data.lng]).addTo(mainMap);
+
+        marker.bindPopup(`
+          <strong>${data.categoria || "Segnalazione"}</strong><br>
+          Stato: ${data.stato || "aperta"}<br>
+          Conferme: ${data.conferme || 0}<br>
+          ${data.descrizione ? `<p>${escapeHtml(data.descrizione)}</p>` : ""}
+          ${data.immagineBase64 ? `<img src="${data.immagineBase64}" class="report-img">` : ""}
+        `);
+
+        mainMarkers.push(marker);
+      });
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
 
 </body>
 </html>
