@@ -40,7 +40,20 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 #exploreScreen{padding:0;flex-direction:column}
 #exploreTopBar{width:100%;height:74px;background:white;display:flex;align-items:center;justify-content:space-between;padding:0 10px;box-sizing:border-box;border-bottom:1px solid #ddd;z-index:999;gap:8px}
 #exploreTitleBox{display:flex;flex-direction:column;align-items:center;font-size:13px;line-height:1.35}
-#statsBox{font-size:12px;font-weight:bold;color:#333}
+#statsBox{
+  position:absolute;
+  top:86px;
+  right:12px;
+  background:white;
+  border-radius:12px;
+  padding:10px 12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.25);
+  z-index:1000;
+  font-size:14px;
+  font-weight:bold;
+  text-align:left;
+  line-height:1.6;
+}
 #exploreMap{width:100%;height:calc(100vh - 74px)}
 .popup-img{width:180px;max-height:140px;object-fit:cover;border-radius:10px;margin-top:8px}
 .popup-box{text-align:left;font-size:14px}
@@ -117,15 +130,19 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
   <div id="exploreTopBar">
     <button class="secondary" id="backHomeBtn">← Home</button>
 
-    <div id="exploreTitleBox">
-      <strong>Mappa segnalazioni</strong>
-      <div id="statsBox">Aperte: 0 · Risolte: 0</div>
-    </div>
-
+ <div id="exploreTitleBox">
+    <strong>Mappa segnalazioni</strong>
+</div>
+  
     <button class="primary" id="newReportBtn">+</button>
   </div>
 
   <div id="exploreMap"></div>
+  <div id="statsBox">
+    🔴 Attive: 0<br>
+    ⭐ Risolte: 0
+</div>
+
 </section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -617,7 +634,10 @@ ${data.ownerId === ownerId
       exploreMarkers.push(markerItem);
     });
 
-    statsBox.textContent = `Aperte: ${openCount} · Risolte: ${resolvedCount}`;
+    statsBox.innerHTML = `
+🔴 Attive: <strong>${openCount}</strong><br>
+⭐ Risolte: <strong>${resolvedCount}</strong>
+`;
 
   } catch (error) {
     console.error("Errore caricamento mappa:", error);
