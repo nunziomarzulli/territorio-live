@@ -262,7 +262,37 @@ camera.onchange = async () => {
   selectedPhoto = file;
   compressedPhoto = await compressImage(file);
 
-  previewImg.src = compressedPhoto;
+const img = new Image();
+
+img.onload = async () => {
+
+    if (aiModel) {
+        const predictions = await aiModel.detect(img);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+
+        predictions.forEach(p => {
+            if (p.class === "person") {
+                const [x,y,w,h] = p.bbox;
+                ctx.filter = "blur(25px)";
+                ctx.drawImage(canvas, x,y,w,h, x,y,w,h);
+                ctx.filter = "none";
+            }
+        });
+
+        compressedPhoto = canvas.toDataURL("image/jpeg",0.8);
+    }
+
+    previewImg.src = compressedPhoto;
+    showScreen(previewScreen);
+};
+
+img.src = compressedPhoto;
   showScreen(previewScreen);
 };
 
