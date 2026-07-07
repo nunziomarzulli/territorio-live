@@ -518,25 +518,20 @@ async function loadReportsFromFirestore(){
 
           <br>
 
-          ${!isResolved && data.ownerId !== ownerId && !(data.confirmedBy || []).includes(ownerId)
-            ? `<button class="primary" onclick="window.confirmReport('${reportId}')">Conferma segnalazione</button>`
-            : ""
-          }
+         ${!isResolved && data.ownerId !== ownerId && !(data.confirmedBy || []).includes(ownerId)
+  ? `<button class="primary" onclick="window.confirmReport('${reportId}')">Conferma segnalazione</button>`
+  : ""
+}
 
-          ${!isResolved && data.ownerId !== ownerId && (data.confirmedBy || []).includes(ownerId)
-            ? `<p><strong>Segnalazione già confermata da questo dispositivo</strong></p>`
-            : ""
-          }
+${!isResolved
+  ? `<button class="resolve" onclick="window.startResolveReport('${reportId}')">⭐ Risolto</button>`
+  : ""
+}
 
-          ${!isResolved
-            ? `<button class="resolve" onclick="window.startResolveReport('${reportId}')">⭐ Risolto</button>`
-            : ""
-          }
-
-          ${data.ownerId === ownerId
-            ? `<button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>`
-            : ""
-          }
+${data.ownerId === ownerId
+  ? `<button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>`
+  : ""
+}
         </div>
       `;
 
