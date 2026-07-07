@@ -193,6 +193,9 @@ let map = null;
 let marker = null;
 let exploreMap = null;
 let exploreMarkers = [];
+let userPositionMarker = null;
+let userPositionCircle = null;
+let userWatchId = null;  
 let currentLat = null;
 let currentLng = null;
 let reportToResolveId = null;
@@ -430,8 +433,77 @@ function initExploreMap(){
   }
 
   exploreMap.invalidateSize();
+  
+  startUserPositionTracking();
+}
+function createUserPositionIcon(){
+    return L.divIcon({
+        html: '<div style="width:18px;height:18px;background:#1e88e5;border:3px solid white;border-radius:50%;box-shadow:0 0 8px rgba(0,0,0,.5)"></div>',
+        className: "",
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+    });
 }
 
+function startUserPositionTracking(){
+
+    if(!exploreMap) return;
+
+    if(!navigator.geolocation){
+        alert("GPS non disponibile su questo dispositivo.");
+        return;
+    }
+
+    if(userWatchId !== null){
+        navigator.geolocation.clearWatch(userWatchId);
+        userWatchId = null;
+    }
+
+    userWatchId = navigator.geolocation.watchPosition(
+
+        function(position){
+
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const accuracy = position.coords.accuracy || 0;
+
+            if(!userPositionMarker){
+                userPositionMarker = L.marker([lat, lng], {
+                    icon: createUserPositionIcon(),
+                    zIndexOffset: 1000
+                }).addTo(exploreMap);
+
+                userPositionCircle = L.circle([lat, lng], {
+                    radius: accuracy,
+                    weight: 1,
+                    fillOpacity: 0.12
+                }).addTo(exploreMap);
+
+                exploreMap.setView([lat, lng], 16);
+
+            } else {
+                userPositionMarker.setLatLng([lat, lng]);
+
+                if(userPositionCircle){
+                    userPositionCircle.setLatLng([lat, lng]);
+                    userPositionCircle.setRadius(accuracy);
+                }
+            }
+
+        },
+
+        function(){
+            console.log("GPS non autorizzato o non disponibile.");
+        },
+
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 10000
+        }
+
+    );
+}
 function createResolvedIcon(){
   return L.divIcon({
     html: '<div style="font-size:32px;line-height:32px;text-shadow:0 2px 6px rgba(0,0,0,.45)">⭐</div>',
