@@ -196,7 +196,9 @@ let exploreMarkers = [];
 let currentLat = null;
 let currentLng = null;
 let reportToResolveId = null;
-
+let reportsCache = {};
+const MAX_RESOLVE_DISTANCE_METERS = 30;
+  
 let ownerId = localStorage.getItem("territorioLiveOwnerId");
 
 if (!ownerId) {
@@ -472,6 +474,10 @@ async function loadReportsFromFirestore(){
       if (!data.lat || !data.lng) return;
 
       const reportId = docSnap.id;
+      reportsCache[reportId] = {
+    lat: data.lat,
+    lng: data.lng
+};
       const status = data.stato || "aperta";
       const isResolved = status === "risolta";
 
@@ -548,9 +554,61 @@ ${data.ownerId === ownerId
 }
 
 window.startResolveReport = function(reportId){
-  reportToResolveId = reportId;
-  alert("Scatta ora una foto del luogo pulito o riparato.");
-  resolveCamera.click();
+
+    const report = reportsCache[reportId];
+
+    if(!report){
+        alert("Errore: dati segnalazione non trovati.");
+        return;
+    }
+
+    if(!navigator.geolocation){
+        alert("GPS non disponibile.");
+        return;
+    }
+
+    alert("Verifica posizione GPS...");
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(position){
+
+            const distanza = calculateDistanceMeters(
+                position.coords.latitude,
+                position.coords.longitude,
+                report.lat,
+                report.lng
+            );
+
+            if(distanza > MAX_RESOLVE_DISTANCE_METERS){
+
+                alert("Devi trovarti entro 30 metri dalla segnalazione.\n\nDistanza attuale: " + Math.round(distanza) + " m");
+
+                return;
+            }
+
+            reportToResolveId = reportId;
+
+            alert("Posizione verificata. Scatta la foto della risoluzione.");
+
+            resolveCamera.click();
+
+        },
+
+        function(){
+
+            alert("Impossibile rilevare la posizione GPS.");
+
+        },
+
+        {
+            enableHighAccuracy:true,
+            timeout:10000,
+            maximumAge:0
+        }
+
+    );
+
 };
 
 window.deleteReport = async function(reportId){
@@ -637,7 +695,23 @@ function compressImage(file){
     reader.readAsDataURL(file);
   });
 }
+function calculateDistanceMeters(lat1, lng1, lat2, lng2){
+    const R = 6371000;
 
+    const radLat1 = lat1 * Math.PI / 180;
+    const radLat2 = lat2 * Math.PI / 180;
+    const deltaLat = (lat2 - lat1) * Math.PI / 180;
+    const deltaLng = (lng2 - lng1) * Math.PI / 180;
+
+    const a =
+        Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+        Math.cos(radLat1) * Math.cos(radLat2) *
+        Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+}
 function formatDate(timestamp){
   if (!timestamp || !timestamp.toDate) {
     return "non disponibile";
