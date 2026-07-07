@@ -25,6 +25,7 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 .secondary{background:#ddd;color:#222}
 .primary{background:#2e7d32;color:white}
 .danger{background:#c62828;color:white;margin-top:8px;width:100%;font-size:15px;padding:10px}
+.resolve{background:#f9a825;color:#111;margin-top:8px;width:100%;font-size:15px;padding:10px;font-weight:bold}
 #mapScreen{padding:0;flex-direction:column}
 #map{width:100%;height:62vh}
 #mapPanel{width:100%;background:white;padding:14px;box-sizing:border-box}
@@ -37,10 +38,14 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 #sendBtn,#backToMapBtn{width:100%;margin-top:12px}
 #loadingText{font-size:22px}
 #exploreScreen{padding:0;flex-direction:column}
-#exploreTopBar{width:100%;height:58px;background:white;display:flex;align-items:center;justify-content:space-between;padding:0 12px;box-sizing:border-box;border-bottom:1px solid #ddd;z-index:999}
-#exploreMap{width:100%;height:calc(100vh - 58px)}
+#exploreTopBar{width:100%;height:74px;background:white;display:flex;align-items:center;justify-content:space-between;padding:0 10px;box-sizing:border-box;border-bottom:1px solid #ddd;z-index:999;gap:8px}
+#exploreTitleBox{display:flex;flex-direction:column;align-items:center;font-size:13px;line-height:1.35}
+#statsBox{font-size:12px;font-weight:bold;color:#333}
+#exploreMap{width:100%;height:calc(100vh - 74px)}
 .popup-img{width:180px;max-height:140px;object-fit:cover;border-radius:10px;margin-top:8px}
 .popup-box{text-align:left;font-size:14px}
+.resolved-label{display:inline-block;background:#f9a825;color:#111;padding:4px 7px;border-radius:8px;font-weight:bold;margin-top:4px}
+.open-label{display:inline-block;background:#c62828;color:white;padding:4px 7px;border-radius:8px;font-weight:bold;margin-top:4px}
 </style>
 </head>
 
@@ -55,6 +60,7 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
   <div class="subtitle">Il territorio parla attraverso i cittadini</div>
 
   <input type="file" accept="image/*" capture="environment" id="camera">
+  <input type="file" accept="image/*" capture="environment" id="resolveCamera">
 
   <button id="cameraBtn">SCATTA</button>
   <button id="openMapBtn">📍 APRI LA MAPPA</button>
@@ -110,7 +116,12 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 <section id="exploreScreen" class="screen">
   <div id="exploreTopBar">
     <button class="secondary" id="backHomeBtn">← Home</button>
-    <strong>Mappa segnalazioni</strong>
+
+    <div id="exploreTitleBox">
+      <strong>Mappa segnalazioni</strong>
+      <div id="statsBox">Aperte: 0 · Risolte: 0</div>
+    </div>
+
     <button class="primary" id="newReportBtn">+</button>
   </div>
 
@@ -130,10 +141,10 @@ import {
   orderBy,
   serverTimestamp,
   deleteDoc,
-doc,
-updateDoc,
-increment,
-arrayUnion
+  doc,
+  updateDoc,
+  increment,
+  arrayUnion
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -150,6 +161,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const camera = document.getElementById("camera");
+const resolveCamera = document.getElementById("resolveCamera");
 const cameraBtn = document.getElementById("cameraBtn");
 const openMapBtn = document.getElementById("openMapBtn");
 
@@ -169,6 +181,7 @@ const sendBtn = document.getElementById("sendBtn");
 const backToMapBtn = document.getElementById("backToMapBtn");
 const backHomeBtn = document.getElementById("backHomeBtn");
 const newReportBtn = document.getElementById("newReportBtn");
+const statsBox = document.getElementById("statsBox");
 
 const categoryButtons = document.querySelectorAll(".categoryBtn");
 const aiSuggestion = document.getElementById("aiSuggestion");
@@ -182,12 +195,13 @@ let exploreMap = null;
 let exploreMarkers = [];
 let currentLat = null;
 let currentLng = null;
+let reportToResolveId = null;
 
 let ownerId = localStorage.getItem("territorioLiveOwnerId");
 
 if (!ownerId) {
-    ownerId = crypto.randomUUID();
-    localStorage.setItem("territorioLiveOwnerId", ownerId);
+  ownerId = crypto.randomUUID();
+  localStorage.setItem("territorioLiveOwnerId", ownerId);
 }
 
 function showScreen(screen){
@@ -213,6 +227,38 @@ camera.onchange = async () => {
 
   previewImg.src = compressedPhoto;
   showScreen(previewScreen);
+};
+
+resolveCamera.onchange = async () => {
+  const file = resolveCamera.files[0];
+  if (!file || !reportToResolveId) return;
+
+  const conferma = confirm("Confermi che questa segnalazione è stata risolta?");
+  if (!conferma) {
+    reportToResolveId = null;
+    resolveCamera.value = "";
+    return;
+  }
+
+  try {
+    const resolvedImageBase64 = await compressImage(file);
+
+    await updateDoc(doc(db, "segnalazioni", reportToResolveId), {
+      stato: "risolta",
+      resolvedAt: serverTimestamp(),
+      resolvedImageBase64: resolvedImageBase64,
+      resolvedBy: ownerId
+    });
+
+    alert("Segnalazione marcata come risolta.");
+    reportToResolveId = null;
+    resolveCamera.value = "";
+    await loadReportsFromFirestore();
+
+  } catch (error) {
+    console.error("Errore risoluzione:", error);
+    alert("Errore durante il salvataggio della risoluzione.");
+  }
 };
 
 retakeBtn.onclick = () => {
@@ -343,9 +389,10 @@ sendBtn.onclick = async () => {
       lng: currentLng,
       immagineBase64: compressedPhoto,
       stato: "aperta",
-     conferme: 0,
-ownerId: ownerId,
-createdAt: serverTimestamp()
+      conferme: 0,
+      confirmedBy: [],
+      ownerId: ownerId,
+      createdAt: serverTimestamp()
     });
 
     alert("Segnalazione inviata correttamente.");
@@ -383,6 +430,26 @@ function initExploreMap(){
   exploreMap.invalidateSize();
 }
 
+function createResolvedIcon(){
+  return L.divIcon({
+    html: '<div style="font-size:32px;line-height:32px;text-shadow:0 2px 6px rgba(0,0,0,.45)">⭐</div>',
+    className: "",
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -14]
+  });
+}
+
+function createOpenIcon(){
+  return L.divIcon({
+    html: '<div style="font-size:32px;line-height:32px;text-shadow:0 2px 6px rgba(0,0,0,.45)">📍</div>',
+    className: "",
+    iconSize: [34, 34],
+    iconAnchor: [17, 34],
+    popupAnchor: [0, -30]
+  });
+}
+
 async function loadReportsFromFirestore(){
   if (!exploreMap) return;
 
@@ -391,6 +458,9 @@ async function loadReportsFromFirestore(){
   });
 
   exploreMarkers = [];
+
+  let openCount = 0;
+  let resolvedCount = 0;
 
   try {
     const q = query(collection(db, "segnalazioni"), orderBy("createdAt", "desc"));
@@ -402,22 +472,71 @@ async function loadReportsFromFirestore(){
       if (!data.lat || !data.lng) return;
 
       const reportId = docSnap.id;
-      const dateText = formatDate(data.createdAt);
+      const status = data.stato || "aperta";
+      const isResolved = status === "risolta";
 
-      const markerItem = L.marker([data.lat, data.lng]).addTo(exploreMap);
+      if (isResolved) {
+        resolvedCount++;
+      } else {
+        openCount++;
+      }
+
+      const dateText = formatDate(data.createdAt);
+      const resolvedDateText = formatDate(data.resolvedAt);
+
+      const markerItem = L.marker(
+        [data.lat, data.lng],
+        { icon: isResolved ? createResolvedIcon() : createOpenIcon() }
+      ).addTo(exploreMap);
 
       const popupHtml = `
         <div class="popup-box">
           <strong>${escapeHtml(data.categoria || "Segnalazione")}</strong><br>
-          Stato: ${escapeHtml(data.stato || "aperta")}<br>
-        Conferme: ${Number(data.conferme || 0)}<br>
-Data: ${dateText}<br>
-${data.immagineBase64 ? `<img class="popup-img" src="${data.immagineBase64}" alt="Foto segnalazione">` : ""}
-<br>
-${data.ownerId !== ownerId && !(data.confirmedBy || []).includes(ownerId) ? `<button class="primary" onclick="window.confirmReport('${reportId}')">Conferma segnalazione</button>` : ""}
-${data.ownerId !== ownerId && (data.confirmedBy || []).includes(ownerId) ? `<p><strong>Segnalazione già confermata da questo dispositivo</strong></p>` : ""}
-${data.ownerId === ownerId ? `<button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>` : ""}
-</div>
+
+          ${isResolved
+            ? `<span class="resolved-label">⭐ Risolta</span><br>`
+            : `<span class="open-label">📍 Aperta</span><br>`
+          }
+
+          Conferme: ${Number(data.conferme || 0)}<br>
+          Data segnalazione: ${dateText}<br>
+
+          ${data.immagineBase64
+            ? `<strong>Foto iniziale</strong><br><img class="popup-img" src="${data.immagineBase64}" alt="Foto segnalazione">`
+            : ""
+          }
+
+          ${isResolved
+            ? `<br><strong>Data risoluzione:</strong> ${resolvedDateText}<br>`
+            : ""
+          }
+
+          ${data.resolvedImageBase64
+            ? `<strong>Foto risoluzione</strong><br><img class="popup-img" src="${data.resolvedImageBase64}" alt="Foto risoluzione">`
+            : ""
+          }
+
+          <br>
+
+          ${!isResolved && data.ownerId !== ownerId && !(data.confirmedBy || []).includes(ownerId)
+            ? `<button class="primary" onclick="window.confirmReport('${reportId}')">Conferma segnalazione</button>`
+            : ""
+          }
+
+          ${!isResolved && data.ownerId !== ownerId && (data.confirmedBy || []).includes(ownerId)
+            ? `<p><strong>Segnalazione già confermata da questo dispositivo</strong></p>`
+            : ""
+          }
+
+          ${!isResolved
+            ? `<button class="resolve" onclick="window.startResolveReport('${reportId}')">⭐ Risolto</button>`
+            : ""
+          }
+
+          ${data.ownerId === ownerId
+            ? `<button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>`
+            : ""
+          }
         </div>
       `;
 
@@ -425,11 +544,19 @@ ${data.ownerId === ownerId ? `<button class="danger" onclick="window.deleteRepor
       exploreMarkers.push(markerItem);
     });
 
+    statsBox.textContent = `Aperte: ${openCount} · Risolte: ${resolvedCount}`;
+
   } catch (error) {
     console.error("Errore caricamento mappa:", error);
     alert("Errore nel caricamento delle segnalazioni.");
   }
 }
+
+window.startResolveReport = function(reportId){
+  reportToResolveId = reportId;
+  alert("Scatta ora una foto del luogo pulito o riparato.");
+  resolveCamera.click();
+};
 
 window.deleteReport = async function(reportId){
   const conferma = confirm("Vuoi eliminare questa segnalazione?");
@@ -445,32 +572,23 @@ window.deleteReport = async function(reportId){
     alert("Errore eliminazione. Controlla le regole Firestore.");
   }
 };
+
 window.confirmReport = async function(reportId){
+  try {
+    await updateDoc(doc(db,"segnalazioni",reportId), {
+      conferme: increment(1),
+      confirmedBy: arrayUnion(ownerId)
+    });
 
-    try{
+    alert("Segnalazione confermata.");
+    await loadReportsFromFirestore();
 
-        await updateDoc(doc(db,"segnalazioni",reportId),{
-
-            conferme: increment(1),
-
-            confirmedBy: arrayUnion(ownerId)
-
-        });
-
-        alert("Segnalazione confermata.");
-
-        await loadReportsFromFirestore();
-
-    }catch(error){
-
-        console.error(error);
-
-        alert("Errore durante la conferma.");
-
-    }
-
+  } catch(error) {
+    console.error(error);
+    alert("Errore durante la conferma.");
+  }
 };
-  
+
 backHomeBtn.onclick = () => {
   showScreen(startScreen);
 };
@@ -482,11 +600,13 @@ newReportBtn.onclick = () => {
 
 function resetReport(){
   camera.value = "";
+  resolveCamera.value = "";
   selectedPhoto = null;
   compressedPhoto = null;
   selectedCategory = null;
   currentLat = null;
   currentLng = null;
+  reportToResolveId = null;
 
   categoryButtons.forEach(btn => btn.classList.remove("selected"));
   aiSuggestion.textContent = "Categoria suggerita: in attesa...";
