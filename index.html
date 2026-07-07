@@ -152,8 +152,7 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 </section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import {
@@ -182,14 +181,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
- let aiModel = null;
-
-async function loadAI() {
-    aiModel = await cocoSsd.load();
-    console.log("AI pronta");
-}
-
-loadAI();   
 const db = getFirestore(app);
 
 const camera = document.getElementById("camera");
@@ -254,7 +245,6 @@ function showScreen(screen){
 cameraBtn.onclick = () => {
   camera.click();
 };
-
 camera.onchange = async () => {
   const file = camera.files[0];
   if (!file) return;
@@ -262,38 +252,9 @@ camera.onchange = async () => {
   selectedPhoto = file;
   compressedPhoto = await compressImage(file);
 
-const img = new Image();
-
-img.onload = async () => {
-
-    if (aiModel) {
-        const predictions = await aiModel.detect(img);
-
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-
-        predictions.forEach(p => {
-            if (p.class === "person") {
-                const [x,y,w,h] = p.bbox;
-                ctx.filter = "blur(25px)";
-                ctx.drawImage(canvas, x,y,w,h, x,y,w,h);
-                ctx.filter = "none";
-            }
-        });
-
-        compressedPhoto = canvas.toDataURL("image/jpeg",0.8);
-    }
-
-    previewImg.src = compressedPhoto;
-    showScreen(previewScreen);
-};
-
-img.src = compressedPhoto;
+  previewImg.src = compressedPhoto;
   showScreen(previewScreen);
+    
 };
 
 resolveCamera.onchange = async () => {
