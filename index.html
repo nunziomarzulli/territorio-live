@@ -228,7 +228,7 @@ const MAX_RESOLVE_DISTANCE_METERS = 30;
 let ownerId = localStorage.getItem("territorioLiveOwnerId");
 
 if (!ownerId) {
-  ownerId = crypto.randomUUID();
+ownerId = Date.now().toString() + Math.random().toString(36).substring(2);
   localStorage.setItem("territorioLiveOwnerId", ownerId);
 }
 
