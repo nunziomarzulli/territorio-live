@@ -182,6 +182,14 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+ let aiModel = null;
+
+async function loadAI() {
+    aiModel = await cocoSsd.load();
+    console.log("AI pronta");
+}
+
+loadAI();   
 const db = getFirestore(app);
 
 const camera = document.getElementById("camera");
