@@ -560,7 +560,6 @@ async function blurFaces(base64Image) {
 
     const result = detector.detect(canvas);
     const faces = result.detections || [];
-    alert("Volti rilevati: " + faces.length);
     faces.forEach(face => {
       const box = face.boundingBox;
       if (!box) return;
@@ -597,10 +596,35 @@ async function blurFaces(base64Image) {
         height
       );
 
-      ctx.save();
-      ctx.filter = "blur(20px)";
-      ctx.drawImage(faceCanvas, x, y, width, height);
-      ctx.restore();
+   const pixelSize = 18;
+
+ctx.imageSmoothingEnabled = false;
+
+ctx.drawImage(
+  faceCanvas,
+  0,
+  0,
+  width,
+  height,
+  x,
+  y,
+  Math.max(1, Math.round(width / pixelSize)),
+  Math.max(1, Math.round(height / pixelSize))
+);
+
+ctx.drawImage(
+  canvas,
+  x,
+  y,
+  Math.max(1, Math.round(width / pixelSize)),
+  Math.max(1, Math.round(height / pixelSize)),
+  x,
+  y,
+  width,
+  height
+);
+
+ctx.imageSmoothingEnabled = true;
     });
 
     return canvas.toDataURL("image/jpeg", 0.55);
