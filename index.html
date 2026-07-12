@@ -515,12 +515,19 @@ function showScreen(screen){
 cameraBtn.onclick = () => {
   camera.click();
 };
+async function blurFaces(base64Image) {
+    // Per ora non fa nulla.
+    // Restituisce semplicemente l'immagine originale.
+    return base64Image;
+}    
 camera.onchange = async () => {
   const file = camera.files[0];
   if (!file) return;
 
   selectedPhoto = file;
-  compressedPhoto = await compressImage(file);
+ compressedPhoto = await blurFaces(
+  await compressImage(file)
+);
 
   previewImg.src = compressedPhoto;
   showScreen(previewScreen);
