@@ -37,6 +37,55 @@ input{display:none}
   max-width:100%;
 }
 
+#privacyProcessingOverlay{
+  position:absolute;
+  inset:0;
+  display:none;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  padding:24px;
+  box-sizing:border-box;
+  border-radius:16px;
+  background:rgba(0,0,0,.72);
+  color:white;
+  z-index:10;
+  text-align:center;
+}
+
+#privacyProcessingOverlay.active{
+  display:flex;
+}
+
+.privacy-spinner{
+  width:54px;
+  height:54px;
+  border:6px solid rgba(255,255,255,.28);
+  border-top-color:#63c74d;
+  border-radius:50%;
+  animation:privacySpin .8s linear infinite;
+  margin-bottom:18px;
+}
+
+#privacyProcessingOverlay strong{
+  font-size:22px;
+  margin-bottom:8px;
+}
+
+#privacyProcessingOverlay p{
+  margin:4px 0;
+  line-height:1.4;
+}
+
+#privacyProcessingStatus{
+  color:#9be58b;
+  font-weight:bold;
+}
+
+@keyframes privacySpin{
+  to{transform:rotate(360deg)}
+}
+
 #previewImg{
   display:block;
   max-width:100%;
@@ -298,6 +347,13 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
       <img id="previewImg" alt="Anteprima foto">
       <canvas id="privacyCanvas"></canvas>
       <div id="selectionBox"></div>
+
+      <div id="privacyProcessingOverlay" aria-live="polite">
+        <div class="privacy-spinner"></div>
+        <strong>🔒 Protezione della privacy</strong>
+        <p id="privacyProcessingStatus">Preparazione dell’immagine...</p>
+        <p>Rilevamento automatico dei volti in corso.</p>
+      </div>
     </div>
 
     <p id="manualPrivacyText">
@@ -506,6 +562,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 let faceDetector = null;
+let faceDetectorPreloadPromise = null;
 
 async function initFaceDetector() {
     if (faceDetector) return faceDetector;
@@ -523,6 +580,18 @@ async function initFaceDetector() {
     });
 
     return faceDetector;
+}
+
+function preloadFaceDetector() {
+  if (!faceDetectorPreloadPromise) {
+    faceDetectorPreloadPromise = initFaceDetector().catch(error => {
+      console.warn("Precaricamento rilevatore volti non riuscito:", error);
+      faceDetectorPreloadPromise = null;
+      return null;
+    });
+  }
+
+  return faceDetectorPreloadPromise;
 }
 
 const firebaseConfig = {
@@ -553,6 +622,8 @@ const exploreScreen = document.getElementById("exploreScreen");
 const previewImg = document.getElementById("previewImg");
 const privacyCanvas = document.getElementById("privacyCanvas");
 const selectionBox = document.getElementById("selectionBox");
+const privacyProcessingOverlay = document.getElementById("privacyProcessingOverlay");
+const privacyProcessingStatus = document.getElementById("privacyProcessingStatus");
 const manualBlurBtn = document.getElementById("manualBlurBtn");
 const undoManualBlurBtn = document.getElementById("undoManualBlurBtn");
 const retakeBtn = document.getElementById("retakeBtn");
@@ -619,6 +690,13 @@ function showScreen(screen){
   screen.classList.add("active");
 
 }
+
+window.addEventListener("load", () => {
+  setTimeout(() => {
+    preloadFaceDetector();
+  }, 300);
+});
+
 cameraBtn.onclick = () => {
   camera.click();
 };
@@ -716,9 +794,41 @@ camera.onchange = async () => {
   if (!file) return;
 
   selectedPhoto = file;
+  manualBlurBtn.disabled = true;
+  undoManualBlurBtn.disabled = true;
+  continueBtn.disabled = true;
 
   try {
-    compressedPhoto = await blurFaces(await compressImage(file));
+    privacyProcessingStatus.textContent = "Preparazione dell’immagine...";
+
+    const initialCompressedPhoto = await compressImage(file);
+    compressedPhoto = initialCompressedPhoto;
+
+    previewImg.src = initialCompressedPhoto;
+
+    await new Promise((resolve, reject) => {
+      previewImg.onload = resolve;
+      previewImg.onerror = reject;
+
+      if (previewImg.complete && previewImg.naturalWidth > 0) {
+        resolve();
+      }
+    });
+
+    showScreen(previewScreen);
+    privacyProcessingOverlay.classList.add("active");
+
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    privacyProcessingStatus.textContent = faceDetector
+      ? "Ricerca dei volti..."
+      : "Caricamento del sistema di protezione...";
+
+    await preloadFaceDetector();
+
+    privacyProcessingStatus.textContent = "Oscuramento automatico dei volti...";
+
+    compressedPhoto = await blurFaces(initialCompressedPhoto);
     previewImg.src = compressedPhoto;
 
     await new Promise((resolve, reject) => {
@@ -731,13 +841,23 @@ camera.onchange = async () => {
     });
 
     prepareManualPrivacyCanvas();
-    showScreen(previewScreen);
 
   } catch (error) {
     console.error("Errore elaborazione foto:", error);
-    alert("Errore durante l'elaborazione della foto.");
-    resetReport();
-    showScreen(startScreen);
+
+    if (compressedPhoto) {
+      prepareManualPrivacyCanvas();
+      alert("La foto è pronta, ma il rilevamento automatico dei volti non è riuscito. Controlla manualmente eventuali aree da oscurare.");
+    } else {
+      alert("Errore durante l'elaborazione della foto.");
+      resetReport();
+      showScreen(startScreen);
+    }
+
+  } finally {
+    privacyProcessingOverlay.classList.remove("active");
+    manualBlurBtn.disabled = false;
+    continueBtn.disabled = false;
   }
 };
 
@@ -1476,6 +1596,10 @@ function resetReport(){
   manualBlurBtn.classList.remove("active");
   manualBlurBtn.textContent = "Oscura area";
   undoManualBlurBtn.disabled = true;
+  manualBlurBtn.disabled = false;
+  continueBtn.disabled = false;
+  privacyProcessingOverlay.classList.remove("active");
+  privacyProcessingStatus.textContent = "Preparazione dell’immagine...";
   selectionBox.style.display = "none";
 
   const privacyCtx = privacyCanvas.getContext("2d");
