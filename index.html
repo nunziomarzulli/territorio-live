@@ -134,6 +134,22 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
   width:100%;
   margin-bottom:25px;
 }
+#contactScreen{
+  background:#f5f5f5;
+  flex-direction:column;
+  justify-content:flex-start;
+  overflow-y:auto;
+}
+
+#contactScreen .primary,
+#contactScreen .secondary{
+  width:100%;
+  margin-top:12px;
+}
+
+#contactScreen .secondary{
+  margin-bottom:25px;
+}    
 .my-report-card{
   width:100%;
   background:white;
@@ -357,6 +373,41 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
   </div>
 
 </section>
+<section id="contactScreen" class="screen">
+
+  <div class="info-page">
+
+    <h2>✉️ Contatta il gestore</h2>
+
+    <div class="info-card">
+      <div class="info-icon">💬</div>
+      <div>
+        <strong>Hai trovato un problema?</strong>
+        <p>Segnala bug, suggerisci nuove funzioni o contattaci per qualsiasi informazione.</p>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-icon">📧</div>
+      <div>
+        <strong>Email</strong>
+        <p>info@territoriolive.it</p>
+      </div>
+    </div>
+
+    <button
+      class="primary"
+      onclick="location.href='mailto:info@territoriolive.it?subject=Contatto%20da%20Territorio%20Live'">
+      📩 Invia una email
+    </button>
+
+    <button id="backFromContactBtn" class="secondary">
+      ← Torna alla Home
+    </button>
+
+  </div>
+
+</section>    
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script type="module">
@@ -417,7 +468,10 @@ const myReportsList = document.getElementById("myReportsList");
 const backFromMyReportsBtn = document.getElementById("backFromMyReportsBtn");
 const howItWorksBtn = document.getElementById("howItWorksBtn");
 const howItWorksScreen = document.getElementById("howItWorksScreen");
-const backFromHowItWorksBtn = document.getElementById("backFromHowItWorksBtn");    
+const backFromHowItWorksBtn = document.getElementById("backFromHowItWorksBtn");  
+const contactManagerBtn = document.getElementById("contactManagerBtn");
+const contactScreen = document.getElementById("contactScreen");
+const backFromContactBtn = document.getElementById("backFromContactBtn");    
 const categoryButtons = document.querySelectorAll(".categoryBtn");
 const aiSuggestion = document.getElementById("aiSuggestion");
 
@@ -454,7 +508,7 @@ function showScreen(screen){
   exploreScreen.classList.remove("active");
   myReportsScreen.classList.remove("active");
   howItWorksScreen.classList.remove("active");
-
+  contactScreen.classList.remove("active");
   screen.classList.add("active");
 
 }
@@ -525,6 +579,13 @@ howItWorksBtn.onclick = () => {
 backFromHowItWorksBtn.onclick = () => {
   showScreen(startScreen);
 };
+  contactManagerBtn.onclick = () => {
+  showScreen(contactScreen);
+};
+
+backFromContactBtn.onclick = () => {
+  showScreen(startScreen);
+};  
 continueBtn.onclick = () => {
   showScreen(loadingScreen);
 
