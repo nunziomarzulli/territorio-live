@@ -79,7 +79,61 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 #backFromMyReportsBtn{
   margin-bottom:25px;
 }
+#howItWorksScreen{
+  background:#f5f5f5;
+  flex-direction:column;
+  justify-content:flex-start;
+  overflow-y:auto;
+}
 
+.info-page{
+  width:100%;
+  max-width:520px;
+  margin:0 auto;
+}
+
+.info-page h2{
+  margin:10px 0 20px;
+}
+
+.info-card{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  background:white;
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:12px;
+  text-align:left;
+  box-shadow:0 2px 10px rgba(0,0,0,.10);
+}
+
+.info-icon{
+  font-size:30px;
+  line-height:1;
+  min-width:38px;
+}
+
+.info-card p{
+  margin:5px 0 0;
+  line-height:1.4;
+  color:#444;
+}
+
+.info-note{
+  background:#e8f5e9;
+  border-left:5px solid #2e7d32;
+  border-radius:10px;
+  padding:14px;
+  margin:18px 0;
+  text-align:left;
+  line-height:1.5;
+}
+
+#backFromHowItWorksBtn{
+  width:100%;
+  margin-bottom:25px;
+}
 .my-report-card{
   width:100%;
   background:white;
@@ -242,7 +296,64 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
     <button id="backFromMyReportsBtn" class="primary">
         ← Torna alla Home
     </button>
+<section id="howItWorksScreen" class="screen">
 
+  <div class="info-page">
+
+    <h2>ⓘ Come funziona</h2>
+
+    <div class="info-card">
+      <div class="info-icon">📸</div>
+      <div>
+        <strong>1. Scatta una foto</strong>
+        <p>Fotografa un problema reale presente sul territorio.</p>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-icon">📍</div>
+      <div>
+        <strong>2. Conferma la posizione</strong>
+        <p>Il GPS individua il luogo della segnalazione.</p>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-icon">📂</div>
+      <div>
+        <strong>3. Scegli la categoria</strong>
+        <p>Indica il tipo di problema rilevato.</p>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-icon">🗺️</div>
+      <div>
+        <strong>4. La segnalazione appare sulla mappa</strong>
+        <p>Gli altri cittadini possono visualizzarla e confermarla.</p>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-icon">⭐</div>
+      <div>
+        <strong>5. Segnala la risoluzione</strong>
+        <p>Chi si trova sul posto può documentare che il problema è stato risolto.</p>
+      </div>
+    </div>
+
+    <p class="info-note">
+      Territorio Live non è un social network: niente commenti, profili pubblici o discussioni.
+      Solo segnalazioni oggettive, foto, posizione e stato dell’intervento.
+    </p>
+
+    <button id="backFromHowItWorksBtn" class="primary">
+      ← Torna alla Home
+    </button>
+
+  </div>
+
+</section>
 </section>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -302,6 +413,12 @@ const myReportsBtn = document.getElementById("myReportsBtn");
 const myReportsScreen = document.getElementById("myReportsScreen");
 const myReportsList = document.getElementById("myReportsList");
 const backFromMyReportsBtn = document.getElementById("backFromMyReportsBtn");
+const howItWorksBtn = document.getElementById("howItWorksBtn");
+const howItWorksScreen = document.getElementById("howItWorksScreen");
+const backFromHowItWorksBtn = document.getElementById("backFromHowItWorksBtn");    
+const howItWorksBtn = document.getElementById("howItWorksBtn");
+const howItWorksScreen = document.getElementById("howItWorksScreen");
+const backFromHowItWorksBtn = document.getElementById("backFromHowItWorksBtn");    
 const categoryButtons = document.querySelectorAll(".categoryBtn");
 const aiSuggestion = document.getElementById("aiSuggestion");
 
@@ -337,6 +454,7 @@ function showScreen(screen){
   categoryScreen.classList.remove("active");
   exploreScreen.classList.remove("active");
   myReportsScreen.classList.remove("active");
+  howItWorksScreen.classList.remove("active");
 
   screen.classList.add("active");
 
@@ -401,7 +519,13 @@ myReportsBtn.onclick = async () => {
 backFromMyReportsBtn.onclick = () => {
   showScreen(startScreen);
 };
+howItWorksBtn.onclick = () => {
+  showScreen(howItWorksScreen);
+};
 
+backFromHowItWorksBtn.onclick = () => {
+  showScreen(startScreen);
+};
 continueBtn.onclick = () => {
   showScreen(loadingScreen);
 
