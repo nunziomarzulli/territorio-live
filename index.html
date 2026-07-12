@@ -411,6 +411,10 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script type="module">
+import {
+  FaceDetector,
+  FilesetResolver
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/+esm";    
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import {
   getFirestore,
@@ -426,6 +430,26 @@ import {
   increment,
   arrayUnion
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+let faceDetector = null;
+
+async function initFaceDetector() {
+    if (faceDetector) return faceDetector;
+
+    const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm"
+    );
+
+    faceDetector = await FaceDetector.createFromOptions(vision, {
+        baseOptions: {
+            modelAssetPath:
+                "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite"
+        },
+        runningMode: "IMAGE"
+    });
+
+    return faceDetector;
+}
 
 const firebaseConfig = {
   apiKey: "AIzaSyAhAJOjQSXmzvo2QnuhB4EIDTK88DCHgm0",
