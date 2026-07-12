@@ -540,10 +540,78 @@ cameraBtn.onclick = () => {
   camera.click();
 };
 async function blurFaces(base64Image) {
-    // Per ora non fa nulla.
-    // Restituisce semplicemente l'immagine originale.
+  try {
+    const detector = await initFaceDetector();
+
+    const img = new Image();
+
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = base64Image;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+
+    const result = detector.detect(canvas);
+    const faces = result.detections || [];
+
+    faces.forEach(face => {
+      const box = face.boundingBox;
+      if (!box) return;
+
+      const paddingX = box.width * 0.25;
+      const paddingY = box.height * 0.30;
+
+      const x = Math.max(0, box.originX - paddingX);
+      const y = Math.max(0, box.originY - paddingY);
+      const width = Math.min(
+        canvas.width - x,
+        box.width + paddingX * 2
+      );
+      const height = Math.min(
+        canvas.height - y,
+        box.height + paddingY * 2
+      );
+
+      const faceCanvas = document.createElement("canvas");
+      faceCanvas.width = width;
+      faceCanvas.height = height;
+
+      const faceCtx = faceCanvas.getContext("2d");
+
+      faceCtx.drawImage(
+        canvas,
+        x,
+        y,
+        width,
+        height,
+        0,
+        0,
+        width,
+        height
+      );
+
+      ctx.save();
+      ctx.filter = "blur(20px)";
+      ctx.drawImage(faceCanvas, x, y, width, height);
+      ctx.restore();
+    });
+
+    return canvas.toDataURL("image/jpeg", 0.55);
+
+  } catch (error) {
+    console.error("Errore oscuramento volti:", error);
+
+    // Se MediaPipe fallisce, la foto continua comunque a salvarsi.
     return base64Image;
-}    
+  }
+}
 camera.onchange = async () => {
   const file = camera.files[0];
   if (!file) return;
