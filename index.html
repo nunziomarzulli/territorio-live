@@ -560,7 +560,7 @@ async function blurFaces(base64Image) {
 
     const result = detector.detect(canvas);
     const faces = result.detections || [];
-
+    alert("Volti rilevati: " + faces.length);
     faces.forEach(face => {
       const box = face.boundingBox;
       if (!box) return;
