@@ -266,7 +266,10 @@ const backToMapBtn = document.getElementById("backToMapBtn");
 const backHomeBtn = document.getElementById("backHomeBtn");
 const newReportBtn = document.getElementById("newReportBtn");
 const statsBox = document.getElementById("statsBox");
-
+const myReportsBtn = document.getElementById("myReportsBtn");
+const myReportsScreen = document.getElementById("myReportsScreen");
+const myReportsList = document.getElementById("myReportsList");
+const backFromMyReportsBtn = document.getElementById("backFromMyReportsBtn");
 const categoryButtons = document.querySelectorAll(".categoryBtn");
 const aiSuggestion = document.getElementById("aiSuggestion");
 
@@ -294,15 +297,18 @@ ownerId = Date.now().toString() + Math.random().toString(36).substring(2);
 }
 
 function showScreen(screen){
+
   startScreen.classList.remove("active");
   previewScreen.classList.remove("active");
   loadingScreen.classList.remove("active");
   mapScreen.classList.remove("active");
   categoryScreen.classList.remove("active");
   exploreScreen.classList.remove("active");
-  screen.classList.add("active");
-}
+  myReportsScreen.classList.remove("active");
 
+  screen.classList.add("active");
+
+}
 cameraBtn.onclick = () => {
   camera.click();
 };
@@ -355,6 +361,14 @@ retakeBtn.onclick = () => {
   showScreen(startScreen);
 };
 
+myReportsBtn.onclick = () => {
+  showScreen(myReportsScreen);
+};
+
+backFromMyReportsBtn.onclick = () => {
+  showScreen(startScreen);
+};
+
 continueBtn.onclick = () => {
   showScreen(loadingScreen);
 
@@ -368,7 +382,6 @@ continueBtn.onclick = () => {
     position => {
       currentLat = position.coords.latitude;
       currentLng = position.coords.longitude;
-
       showScreen(mapScreen);
 
       setTimeout(() => {
