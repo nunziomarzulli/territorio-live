@@ -53,6 +53,18 @@ input{display:none}
   border-radius:16px;
   touch-action:none;
   display:none;
+  z-index:2;
+  cursor:crosshair;
+}
+
+#selectionBox{
+  position:absolute;
+  display:none;
+  border:3px dashed #f9a825;
+  background:rgba(249,168,37,.18);
+  box-sizing:border-box;
+  pointer-events:none;
+  z-index:3;
 }
 
 #manualPrivacyText{
@@ -285,10 +297,11 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
     <div id="previewImageBox">
       <img id="previewImg" alt="Anteprima foto">
       <canvas id="privacyCanvas"></canvas>
+      <div id="selectionBox"></div>
     </div>
 
     <p id="manualPrivacyText">
-      Premi “Oscura area”, poi trascina il dito sulla foto per delimitare la targa.
+      Premi “Oscura area”, poi trascina il dito sulla foto per racchiudere la targa.
     </p>
 
     <div class="buttons">
@@ -539,6 +552,7 @@ const exploreScreen = document.getElementById("exploreScreen");
 
 const previewImg = document.getElementById("previewImg");
 const privacyCanvas = document.getElementById("privacyCanvas");
+const selectionBox = document.getElementById("selectionBox");
 const manualBlurBtn = document.getElementById("manualBlurBtn");
 const undoManualBlurBtn = document.getElementById("undoManualBlurBtn");
 const retakeBtn = document.getElementById("retakeBtn");
@@ -608,10 +622,10 @@ function showScreen(screen){
 cameraBtn.onclick = () => {
   camera.click();
 };
+
 async function blurFaces(base64Image) {
   try {
     const detector = await initFaceDetector();
-
     const img = new Image();
 
     await new Promise((resolve, reject) => {
@@ -629,147 +643,210 @@ async function blurFaces(base64Image) {
 
     const result = detector.detect(canvas);
     const faces = result.detections || [];
+
     faces.forEach(face => {
       const box = face.boundingBox;
       if (!box) return;
 
       const paddingX = box.width * 0.25;
       const paddingY = box.height * 0.30;
+      const x = Math.max(0, Math.floor(box.originX - paddingX));
+      const y = Math.max(0, Math.floor(box.originY - paddingY));
+      const width = Math.min(canvas.width - x, Math.ceil(box.width + paddingX * 2));
+      const height = Math.min(canvas.height - y, Math.ceil(box.height + paddingY * 2));
 
-      const x = Math.max(0, box.originX - paddingX);
-      const y = Math.max(0, box.originY - paddingY);
-      const width = Math.min(
-        canvas.width - x,
-        box.width + paddingX * 2
-      );
-      const height = Math.min(
-        canvas.height - y,
-        box.height + paddingY * 2
-      );
-
-      const faceCanvas = document.createElement("canvas");
-      faceCanvas.width = width;
-      faceCanvas.height = height;
-
-      const faceCtx = faceCanvas.getContext("2d");
-
-      faceCtx.drawImage(
-        canvas,
-        x,
-        y,
-        width,
-        height,
-        0,
-        0,
-        width,
-        height
-      );
-
-   const pixelSize = 18;
-
-ctx.imageSmoothingEnabled = false;
-
-ctx.drawImage(
-  faceCanvas,
-  0,
-  0,
-  width,
-  height,
-  x,
-  y,
-  Math.max(1, Math.round(width / pixelSize)),
-  Math.max(1, Math.round(height / pixelSize))
-);
-
-ctx.drawImage(
-  canvas,
-  x,
-  y,
-  Math.max(1, Math.round(width / pixelSize)),
-  Math.max(1, Math.round(height / pixelSize)),
-  x,
-  y,
-  width,
-  height
-);
-
-ctx.imageSmoothingEnabled = true;
+      pixelateArea(ctx, canvas, x, y, width, height);
     });
 
     return canvas.toDataURL("image/jpeg", 0.55);
 
   } catch (error) {
     console.error("Errore oscuramento volti:", error);
-
-    // Se MediaPipe fallisce, la foto continua comunque a salvarsi.
     return base64Image;
   }
 }
+
+function pixelateArea(ctx, sourceCanvas, x, y, width, height) {
+  if (width <= 0 || height <= 0) return;
+
+  const tempCanvas = document.createElement("canvas");
+  tempCanvas.width = width;
+  tempCanvas.height = height;
+
+  const tempCtx = tempCanvas.getContext("2d");
+  tempCtx.drawImage(sourceCanvas, x, y, width, height, 0, 0, width, height);
+
+  const pixelSize = 18;
+  const smallWidth = Math.max(1, Math.round(width / pixelSize));
+  const smallHeight = Math.max(1, Math.round(height / pixelSize));
+
+  const pixelCanvas = document.createElement("canvas");
+  pixelCanvas.width = smallWidth;
+  pixelCanvas.height = smallHeight;
+
+  const pixelCtx = pixelCanvas.getContext("2d");
+  pixelCtx.imageSmoothingEnabled = false;
+  pixelCtx.drawImage(tempCanvas, 0, 0, width, height, 0, 0, smallWidth, smallHeight);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(pixelCanvas, 0, 0, smallWidth, smallHeight, x, y, width, height);
+  ctx.restore();
+}
+
+function prepareManualPrivacyCanvas() {
+  privacyCanvas.width = previewImg.naturalWidth;
+  privacyCanvas.height = previewImg.naturalHeight;
+
+  const ctx = privacyCanvas.getContext("2d");
+  ctx.clearRect(0, 0, privacyCanvas.width, privacyCanvas.height);
+  ctx.drawImage(previewImg, 0, 0, privacyCanvas.width, privacyCanvas.height);
+
+  blurHistory = [];
+  undoManualBlurBtn.disabled = true;
+  manualBlurMode = false;
+  privacyCanvas.style.display = "none";
+  manualBlurBtn.classList.remove("active");
+  manualBlurBtn.textContent = "Oscura area";
+  selectionBox.style.display = "none";
+}
+
 camera.onchange = async () => {
   const file = camera.files[0];
   if (!file) return;
 
   selectedPhoto = file;
- compressedPhoto = await blurFaces(
-  await compressImage(file)
-);
+
+  try {
+    compressedPhoto = await blurFaces(await compressImage(file));
+    previewImg.src = compressedPhoto;
+
+    await new Promise((resolve, reject) => {
+      previewImg.onload = resolve;
+      previewImg.onerror = reject;
+
+      if (previewImg.complete && previewImg.naturalWidth > 0) {
+        resolve();
+      }
+    });
+
+    prepareManualPrivacyCanvas();
+    showScreen(previewScreen);
+
+  } catch (error) {
+    console.error("Errore elaborazione foto:", error);
+    alert("Errore durante l'elaborazione della foto.");
+    resetReport();
+    showScreen(startScreen);
+  }
+};
+
 manualBlurBtn.onclick = () => {
   manualBlurMode = !manualBlurMode;
 
   if (manualBlurMode) {
     privacyCanvas.style.display = "block";
     manualBlurBtn.classList.add("active");
-    manualBlurBtn.textContent = "Seleziona targa sulla foto";
+    manualBlurBtn.textContent = "Seleziona la targa";
   } else {
     privacyCanvas.style.display = "none";
     manualBlurBtn.classList.remove("active");
     manualBlurBtn.textContent = "Oscura area";
   }
 };
- privacyCanvas.onpointerdown = (e) => {
+
+privacyCanvas.onpointerdown = (event) => {
   if (!manualBlurMode) return;
 
   isDrawing = true;
-  privacyCanvas.setPointerCapture(e.pointerId);
+  privacyCanvas.setPointerCapture(event.pointerId);
 
   const rect = privacyCanvas.getBoundingClientRect();
   const scaleX = privacyCanvas.width / rect.width;
   const scaleY = privacyCanvas.height / rect.height;
 
-  startX = (e.clientX - rect.left) * scaleX;
-  startY = (e.clientY - rect.top) * scaleY;
+  startX = (event.clientX - rect.left) * scaleX;
+  startY = (event.clientY - rect.top) * scaleY;
+
+  selectionBox.style.display = "block";
+  selectionBox.style.left = (event.clientX - rect.left) + "px";
+  selectionBox.style.top = (event.clientY - rect.top) + "px";
+  selectionBox.style.width = "0px";
+  selectionBox.style.height = "0px";
 };
-previewImg.src = compressedPhoto;
 
-await new Promise(resolve => {
-  previewImg.onload = resolve;
+privacyCanvas.onpointermove = (event) => {
+  if (!manualBlurMode || !isDrawing) return;
 
-  if (previewImg.complete) {
-    resolve();
-  }
-});
+  const rect = privacyCanvas.getBoundingClientRect();
+  const currentX = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+  const currentY = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
 
-privacyCanvas.width = previewImg.naturalWidth;
-privacyCanvas.height = previewImg.naturalHeight;
+  const startDisplayX = startX / (privacyCanvas.width / rect.width);
+  const startDisplayY = startY / (privacyCanvas.height / rect.height);
 
-const privacyCtx = privacyCanvas.getContext("2d");
-privacyCtx.clearRect(
-  0,
-  0,
-  privacyCanvas.width,
-  privacyCanvas.height
-);
+  const left = Math.min(startDisplayX, currentX);
+  const top = Math.min(startDisplayY, currentY);
+  const width = Math.abs(currentX - startDisplayX);
+  const height = Math.abs(currentY - startDisplayY);
 
-privacyCtx.drawImage(
-  previewImg,
-  0,
-  0,
-  privacyCanvas.width,
-  privacyCanvas.height
-);
+  selectionBox.style.display = "block";
+  selectionBox.style.left = left + "px";
+  selectionBox.style.top = top + "px";
+  selectionBox.style.width = width + "px";
+  selectionBox.style.height = height + "px";
+};
 
-showScreen(previewScreen);
-    
+privacyCanvas.onpointerup = (event) => {
+  if (!manualBlurMode || !isDrawing) return;
+
+  isDrawing = false;
+  selectionBox.style.display = "none";
+
+  const rect = privacyCanvas.getBoundingClientRect();
+  const scaleX = privacyCanvas.width / rect.width;
+  const scaleY = privacyCanvas.height / rect.height;
+
+  const endX = (event.clientX - rect.left) * scaleX;
+  const endY = (event.clientY - rect.top) * scaleY;
+
+  const x = Math.max(0, Math.floor(Math.min(startX, endX)));
+  const y = Math.max(0, Math.floor(Math.min(startY, endY)));
+  const width = Math.min(privacyCanvas.width - x, Math.ceil(Math.abs(endX - startX)));
+  const height = Math.min(privacyCanvas.height - y, Math.ceil(Math.abs(endY - startY)));
+
+  if (width < 10 || height < 10) return;
+
+  const ctx = privacyCanvas.getContext("2d");
+
+  blurHistory.push(
+    ctx.getImageData(0, 0, privacyCanvas.width, privacyCanvas.height)
+  );
+
+  pixelateArea(ctx, privacyCanvas, x, y, width, height);
+
+  compressedPhoto = privacyCanvas.toDataURL("image/jpeg", 0.55);
+  previewImg.src = compressedPhoto;
+  undoManualBlurBtn.disabled = false;
+};
+
+privacyCanvas.onpointercancel = () => {
+  isDrawing = false;
+  selectionBox.style.display = "none";
+};
+
+undoManualBlurBtn.onclick = () => {
+  if (blurHistory.length === 0) return;
+
+  const previousState = blurHistory.pop();
+  const ctx = privacyCanvas.getContext("2d");
+
+  ctx.putImageData(previousState, 0, 0);
+
+  compressedPhoto = privacyCanvas.toDataURL("image/jpeg", 0.55);
+  previewImg.src = compressedPhoto;
+
+  undoManualBlurBtn.disabled = blurHistory.length === 0;
 };
 
 resolveCamera.onchange = async () => {
@@ -1391,6 +1468,19 @@ function resetReport(){
   currentLat = null;
   currentLng = null;
   reportToResolveId = null;
+
+  manualBlurMode = false;
+  blurHistory = [];
+  isDrawing = false;
+  privacyCanvas.style.display = "none";
+  manualBlurBtn.classList.remove("active");
+  manualBlurBtn.textContent = "Oscura area";
+  undoManualBlurBtn.disabled = true;
+  selectionBox.style.display = "none";
+
+  const privacyCtx = privacyCanvas.getContext("2d");
+  privacyCtx.clearRect(0, 0, privacyCanvas.width, privacyCanvas.height);
+  previewImg.removeAttribute("src");
 
   categoryButtons.forEach(btn => btn.classList.remove("selected"));
   aiSuggestion.textContent = "Categoria suggerita: in attesa...";
