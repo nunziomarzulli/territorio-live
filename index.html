@@ -288,7 +288,7 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
     </div>
 
     <p id="manualPrivacyText">
-      Se nella foto è visibile una targa, premi “Oscura area” e trascina il dito sulla targa.
+      Premi “Oscura area”, poi trascina il dito sulla foto per delimitare la targa.
     </p>
 
     <div class="buttons">
@@ -719,7 +719,7 @@ manualBlurBtn.onclick = () => {
   if (manualBlurMode) {
     privacyCanvas.style.display = "block";
     manualBlurBtn.classList.add("active");
-    manualBlurBtn.textContent = "Trascina sulla targa";
+    manualBlurBtn.textContent = "Seleziona targa sulla foto";
   } else {
     privacyCanvas.style.display = "none";
     manualBlurBtn.classList.remove("active");
