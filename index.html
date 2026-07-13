@@ -18,7 +18,24 @@
 body{margin:0;font-family:Arial,Helvetica,sans-serif;height:100vh}
 .screen{display:none;height:100vh;justify-content:center;align-items:center;text-align:center;padding:20px;box-sizing:border-box}
 .active{display:flex}
-#startScreen{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.45)),radial-gradient(circle at center,#1b5e20 0%,#061308 35%,#020402 100%);color:white;flex-direction:column}
+#startScreen{
+  position:relative;
+  background:
+    linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.45)),
+    radial-gradient(circle at center,#1b5e20 0%,#061308 35%,#020402 100%);
+  color:white;
+  flex-direction:column;
+}
+ #homeFooter{
+  position:absolute;
+  bottom:10px;
+  left:10px;
+  right:10px;
+  text-align:center;
+  font-size:11px;
+  line-height:1.45;
+  color:rgba(255,255,255,.65);
+}   
 .logo{display:flex;flex-direction:column;align-items:center;font-size:34px;font-weight:800;letter-spacing:1px}
 .logo-img{width:220px;height:auto;margin-bottom:22px}
 .logo span{color:#63c74d}
@@ -495,6 +512,11 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 
   <button id="cameraBtn">SCATTA</button>
   <button id="openMapBtn">📍 APRI LA MAPPA</button>
+    <div id="homeFooter">
+  <div><strong>Territorio Live BETA 0.9</strong></div>
+  <div>© 2026 Territorio Live - Tutti i diritti riservati</div>
+  <div>Versione Beta - Aiutaci a migliorare segnalando eventuali problemi.</div>
+</div>
 </section>
 
 <section id="previewScreen" class="screen">
