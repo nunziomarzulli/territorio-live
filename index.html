@@ -821,6 +821,7 @@ let availableMunicipalities = [];
 let currentMunicipalityFilter = "Tutti";
 let currentCategoryFilter = "Tutte";
 const MAX_RESOLVE_DISTANCE_METERS = 30;
+const MAX_REOPEN_DISTANCE_METERS = 15;
   
 let ownerId = localStorage.getItem("territorioLiveOwnerId");
 
@@ -1359,6 +1360,50 @@ async function reverseGeocode(lat, lng){
   }
 }
 
+async function findNearbyResolvedReport(lat, lng, category){
+  const snapshot = await getDocs(
+    collection(db, "segnalazioni")
+  );
+
+  let nearestReport = null;
+  let nearestDistance = Infinity;
+
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+
+    if ((data.stato || "") !== "risolta") return;
+    if ((data.categoria || "") !== category) return;
+
+    const reportLat = Number(data.lat);
+    const reportLng = Number(data.lng);
+
+    if (!Number.isFinite(reportLat) || !Number.isFinite(reportLng)) {
+      return;
+    }
+
+    const distance = calculateDistanceMeters(
+      lat,
+      lng,
+      reportLat,
+      reportLng
+    );
+
+    if (
+      distance <= MAX_REOPEN_DISTANCE_METERS &&
+      distance < nearestDistance
+    ) {
+      nearestDistance = distance;
+      nearestReport = {
+        id: docSnap.id,
+        data,
+        distance
+      };
+    }
+  });
+
+  return nearestReport;
+}
+
 sendBtn.onclick = async () => {
   if (!selectedCategory) {
     alert("Scegli una categoria.");
@@ -1381,6 +1426,66 @@ sendBtn.onclick = async () => {
   try {
     const locationData = await reverseGeocode(currentLat, currentLng);
 
+    sendBtn.textContent = "Controllo segnalazioni vicine...";
+
+    const nearbyResolvedReport = await findNearbyResolvedReport(
+      currentLat,
+      currentLng,
+      selectedCategory
+    );
+
+    if (nearbyResolvedReport) {
+      const previousReport = nearbyResolvedReport.data;
+      const previousResolvedDate = formatDate(previousReport.resolvedAt);
+
+      const reopenConfirmed = confirm(
+        "In questo punto risulta già una segnalazione della stessa categoria, " +
+        "risolta il " + previousResolvedDate + ".\n\n" +
+        "Il problema si è ripresentato?"
+      );
+
+      if (reopenConfirmed) {
+        sendBtn.textContent = "Riapertura in corso...";
+
+        const firstReportDate =
+          previousReport.primaSegnalazioneAt ||
+          previousReport.createdAt ||
+          serverTimestamp();
+
+        await updateDoc(
+          doc(db, "segnalazioni", nearbyResolvedReport.id),
+          {
+            categoria: selectedCategory,
+            lat: currentLat,
+            lng: currentLng,
+            immagineBase64: compressedPhoto,
+            stato: "aperta",
+            conferme: 0,
+            confirmedBy: [],
+            ownerId: ownerId,
+            indirizzo: locationData.indirizzo,
+            comune: locationData.comune,
+            provincia: locationData.provincia,
+            regione: locationData.regione,
+            primaSegnalazioneAt: firstReportDate,
+            createdAt: serverTimestamp(),
+            reopenedAt: serverTimestamp(),
+            ricorrenze: increment(1),
+            resolvedAt: null,
+            resolvedImageBase64: "",
+            resolvedBy: ""
+          }
+        );
+
+        alert("Segnalazione riaperta correttamente.");
+        resetReport();
+        showScreen(startScreen);
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Invia segnalazione";
+        return;
+      }
+    }
+
     sendBtn.textContent = "Invio in corso...";
 
     await addDoc(collection(db, "segnalazioni"), {
@@ -1396,6 +1501,7 @@ sendBtn.onclick = async () => {
       comune: locationData.comune,
       provincia: locationData.provincia,
       regione: locationData.regione,
+      ricorrenze: 0,
       createdAt: serverTimestamp()
     });
 
@@ -1751,6 +1857,10 @@ async function loadReportsFromFirestore(){
 
           Conferme: ${Number(data.conferme || 0)}<br>
           Data segnalazione: ${dateText}<br>
+          ${Number(data.ricorrenze || 0) > 0
+            ? `Ricorrenze: ${Number(data.ricorrenze || 0)}<br>`
+            : ""
+          }
 
           ${data.immagineBase64
             ? `<strong>Foto iniziale</strong><br><img class="popup-img" src="${data.immagineBase64}" alt="Foto segnalazione">`
@@ -1857,6 +1967,10 @@ async function loadMyReports(){
           <p>
             <strong>Data:</strong> ${createdDate}<br>
             <strong>Conferme:</strong> ${Number(report.conferme || 0)}
+            ${Number(report.ricorrenze || 0) > 0
+              ? `<br><strong>Ricorrenze:</strong> ${Number(report.ricorrenze || 0)}`
+              : ""
+            }
             ${isResolved
               ? `<br><strong>Risolta il:</strong> ${resolvedDate}`
               : ""
