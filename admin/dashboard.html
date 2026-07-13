@@ -6,765 +6,971 @@
 
 <title>Dashboard Gestore - Territorio Live</title>
 
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+>
+
 <style>
 *{
-    box-sizing:border-box;
+  box-sizing:border-box;
+}
+
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#111;
+  color:white;
 }
 
 body{
-    margin:0;
-    font-family:Arial,Helvetica,sans-serif;
-    background:#111;
-    color:white;
-}
-
-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:15px;
-    padding:18px 24px;
-    background:#1d1d1d;
-    border-bottom:1px solid #333;
-}
-
-h1{
-    margin:0;
-    font-size:24px;
-    color:#39d353;
-}
-
-button{
-    border:none;
-    border-radius:8px;
-    padding:10px 16px;
-    font-size:15px;
-    font-weight:bold;
-    cursor:pointer;
-}
-
-#logoutBtn{
-    background:#ff5f5f;
-    color:white;
-}
-
-main{
-    padding:24px;
-}
-
-.dashboard-card{
-    background:#1d1d1d;
-    border-radius:14px;
-    padding:22px;
-    max-width:1000px;
-    margin:0 auto;
-}
-
-.dashboard-header{
-    margin-bottom:24px;
-}
-
-.dashboard-header h2{
-    margin-top:0;
-}
-
-.divider{
-    border:0;
-    border-top:1px solid #333;
-    margin:22px 0;
+  overflow:hidden;
 }
 
 #loading{
-    min-height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
+  position:fixed;
+  inset:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#111;
+  z-index:5000;
+  font-size:18px;
+}
+
+#dashboard{
+  display:none;
+  width:100%;
+  height:100%;
+}
+
+header{
+  height:68px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:10px 16px;
+  background:#1d1d1d;
+  border-bottom:1px solid #333;
+}
+
+.brand{
+  min-width:0;
+}
+
+.brand h1{
+  margin:0;
+  color:#39d353;
+  font-size:22px;
+}
+
+.brand p{
+  margin:3px 0 0;
+  color:#aaa;
+  font-size:12px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+#logoutBtn{
+  border:none;
+  border-radius:9px;
+  padding:10px 15px;
+  background:#c62828;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+#toolbar{
+  min-height:104px;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(160px,1fr)) auto;
+  gap:10px;
+  align-items:end;
+  padding:12px 16px;
+  background:#181818;
+  border-bottom:1px solid #333;
+}
+
+.filter-group{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.filter-group label{
+  color:#aaa;
+  font-size:12px;
+  font-weight:bold;
+}
+
+.filter-group select{
+  width:100%;
+  padding:10px;
+  border:1px solid #444;
+  border-radius:9px;
+  background:#2a2a2a;
+  color:white;
+  font-size:14px;
+}
+
+#resetFiltersBtn{
+  border:none;
+  border-radius:9px;
+  padding:11px 15px;
+  background:#444;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+#mapWrap{
+  position:relative;
+  width:100%;
+  height:calc(100% - 172px);
+}
+
+#adminMap{
+  width:100%;
+  height:100%;
+}
+
+#statsBox{
+  position:absolute;
+  left:15px;
+  bottom:18px;
+  z-index:1000;
+  min-width:165px;
+  padding:11px 14px;
+  border-radius:12px;
+  background:rgba(20,20,20,.92);
+  color:white;
+  box-shadow:0 4px 15px rgba(0,0,0,.35);
+  font-size:14px;
+  line-height:1.6;
+}
+
+#refreshBtn{
+  position:absolute;
+  right:15px;
+  bottom:18px;
+  z-index:1000;
+  border:none;
+  border-radius:50%;
+  width:48px;
+  height:48px;
+  background:#2e7d32;
+  color:white;
+  font-size:22px;
+  cursor:pointer;
+  box-shadow:0 4px 15px rgba(0,0,0,.35);
+}
+
+.category-marker{
+  width:38px;
+  height:38px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:#c62828;
+  border:3px solid white;
+  box-shadow:0 2px 8px rgba(0,0,0,.45);
+  font-size:22px;
+}
+
+.popup{
+  min-width:220px;
+  max-width:280px;
+  color:#222;
+  text-align:left;
+}
+
+.popup h3{
+  margin:0 0 8px;
+  color:#1b5e20;
+  font-size:17px;
+}
+
+.popup img{
+  display:block;
+  width:100%;
+  max-height:170px;
+  object-fit:cover;
+  border-radius:9px;
+  margin:8px 0;
+}
+
+.popup-row{
+  margin:5px 0;
+  line-height:1.35;
+}
+
+.badge{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:15px;
+  font-size:12px;
+  font-weight:bold;
+}
+
+.badge-open{
+  background:#c62828;
+  color:white;
+}
+
+.badge-resolved{
+  background:#f9a825;
+  color:#111;
+}
+
+.popup-actions{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:10px;
+}
+
+.popup-actions a,
+.popup-actions button{
+  display:block;
+  width:100%;
+  border:none;
+  border-radius:8px;
+  padding:10px;
+  text-align:center;
+  text-decoration:none;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.map-link{
+  background:#1565c0;
+  color:white;
+}
+
+.delete-btn{
+  background:#c62828;
+  color:white;
+}
+
+.empty-overlay{
+  position:absolute;
+  inset:0;
+  z-index:900;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+}
+
+.empty-overlay div{
+  background:rgba(20,20,20,.9);
+  color:white;
+  border-radius:12px;
+  padding:14px 18px;
+  box-shadow:0 4px 18px rgba(0,0,0,.35);
+}
+
+@media(max-width:900px){
+  #toolbar{
+    grid-template-columns:repeat(2,minmax(130px,1fr));
+    min-height:176px;
+  }
+
+  #mapWrap{
+    height:calc(100% - 244px);
+  }
+
+  #resetFiltersBtn{
+    width:100%;
+  }
+}
+
+@media(max-width:560px){
+  header{
+    height:74px;
+  }
+
+  .brand h1{
     font-size:18px;
-}
+  }
 
-#dashboardContent{
-    display:none;
-}
-
-#reportsLoading{
-    color:#bbb;
-    margin-bottom:16px;
-}
-
-.report-card{
-    display:grid;
-    grid-template-columns:180px 1fr;
-    gap:18px;
-    background:#2a2a2a;
-    border-radius:12px;
-    padding:16px;
-    margin-bottom:16px;
-}
-
-.report-image{
-    width:180px;
-    height:140px;
-    object-fit:cover;
-    border-radius:10px;
-    background:#181818;
-}
-
-.report-image-placeholder{
-    width:180px;
-    height:140px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:10px;
-    background:#181818;
-    color:#888;
-    text-align:center;
+  #toolbar{
+    grid-template-columns:1fr 1fr;
     padding:10px;
-}
+    gap:8px;
+  }
 
-.report-content{
-    min-width:0;
-}
+  .filter-group select{
+    font-size:12px;
+    padding:9px 7px;
+  }
 
-.report-category{
-    margin:0 0 12px;
-    color:#39d353;
-    font-size:19px;
-}
+  #mapWrap{
+    height:calc(100% - 250px);
+  }
 
-.report-row{
-    margin:7px 0;
-    line-height:1.4;
-    word-break:break-word;
-}
+  #statsBox{
+    left:8px;
+    bottom:8px;
+    font-size:12px;
+    min-width:145px;
+  }
 
-.report-label{
-    color:#aaa;
-    font-weight:bold;
-}
-
-.moderation-box{
-    margin-top:12px;
-    padding:12px;
-    border-radius:9px;
-    background:#542121;
-    color:#ffb2b2;
-}
-
-.status-badge{
-    display:inline-block;
-    padding:5px 9px;
-    border-radius:20px;
-    font-size:13px;
-    font-weight:bold;
-    text-transform:capitalize;
-}
-
-.status-open{
-    background:#5a4412;
-    color:#ffd66b;
-}
-
-.status-resolved{
-    background:#174f2a;
-    color:#75e897;
-}
-
-.status-other{
-    background:#444;
-    color:#ddd;
-}
-
-.error-message{
-    padding:14px;
-    border-radius:10px;
-    background:#4a1f1f;
-    color:#ff9b9b;
-}
-
-.empty-message{
-    padding:18px;
-    border-radius:10px;
-    background:#252525;
-    color:#bbb;
-    text-align:center;
-}
-
-.report-actions{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    margin-top:16px;
-}
-
-.action-approve{
-    background:#2e7d32;
-    color:white;
-}
-
-.action-delete{
-    background:#c62828;
-    color:white;
-}
-
-.action-map{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:8px;
-    padding:10px 16px;
-    font-size:15px;
-    font-weight:bold;
-    text-decoration:none;
-    background:#1565c0;
-    color:white;
-}
-
-.report-actions button:disabled{
-    opacity:.55;
-    cursor:not-allowed;
-}
-
-@media(max-width:700px){
-
-    header{
-        padding:15px;
-    }
-
-    h1{
-        font-size:20px;
-    }
-
-    main{
-        padding:14px;
-    }
-
-    .dashboard-card{
-        padding:16px;
-    }
-
-    .report-card{
-        grid-template-columns:1fr;
-    }
-
-    .report-image,
-    .report-image-placeholder{
-        width:100%;
-        height:210px;
-    }
+  #refreshBtn{
+    right:8px;
+    bottom:8px;
+  }
 }
 </style>
 </head>
 
 <body>
 
-<div id="loading">
-    Verifica accesso...
+<div id="loading">Verifica accesso...</div>
+
+<div id="dashboard">
+
+  <header>
+    <div class="brand">
+      <h1>Territorio Live — Gestore</h1>
+      <p id="adminEmail"></p>
+    </div>
+
+    <button id="logoutBtn" type="button">Esci</button>
+  </header>
+
+  <div id="toolbar">
+
+    <div class="filter-group">
+      <label for="provinceFilter">Provincia</label>
+      <select id="provinceFilter">
+        <option value="Tutte">Tutte</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="municipalityFilter">Comune</label>
+      <select id="municipalityFilter">
+        <option value="Tutti">Tutti</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="categoryFilter">Problematica</label>
+      <select id="categoryFilter">
+        <option value="Tutte">Tutte</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="statusFilter">Stato</label>
+      <select id="statusFilter">
+        <option value="Tutte">Tutte</option>
+        <option value="Aperte">Aperte</option>
+        <option value="Risolte">Risolte</option>
+      </select>
+    </div>
+
+    <button id="resetFiltersBtn" type="button">
+      Azzera filtri
+    </button>
+
+  </div>
+
+  <div id="mapWrap">
+    <div id="adminMap"></div>
+
+    <div id="emptyOverlay" class="empty-overlay">
+      <div>Nessuna segnalazione con questi filtri.</div>
+    </div>
+
+    <div id="statsBox">
+      Caricamento...
+    </div>
+
+    <button id="refreshBtn" type="button" title="Aggiorna">
+      ↻
+    </button>
+  </div>
+
 </div>
 
-<div id="dashboardContent">
-
-    <header>
-        <h1>Territorio Live</h1>
-
-        <button id="logoutBtn" type="button">
-            Esci
-        </button>
-    </header>
-
-    <main>
-        <div class="dashboard-card">
-
-            <div class="dashboard-header">
-                <h2>Dashboard Gestore</h2>
-                <p>Accesso effettuato correttamente.</p>
-                <p id="adminEmail"></p>
-            </div>
-
-            <hr class="divider">
-
-            <h3>Segnalazioni da controllare</h3>
-
-            <div id="reportsLoading">
-                Caricamento segnalazioni...
-            </div>
-
-            <div id="reportsList"></div>
-
-        </div>
-    </main>
-
-</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script type="module">
 
 import {
-    initializeApp
-} from
-"https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 
 import {
-    getAuth,
-    onAuthStateChanged,
-    signOut
-} from
-"https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
 import {
-    getFirestore,
-    collection,
-    getDocs,
-    query,
-    orderBy,
-    limit,
-    doc,
-    updateDoc,
-    deleteDoc,
-    serverTimestamp
-} from
-"https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+  getFirestore,
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  deleteDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyAhAJOjQSXmzvo2QnuHb4EIDTK88DCHgm0",
-    authDomain: "territorio-live.firebaseapp.com",
-    projectId: "territorio-live",
-    storageBucket: "territorio-live.firebasestorage.app",
-    messagingSenderId: "1014933311241",
-    appId: "1:1014933311241:web:21cd7b52882677ede58dd8",
-    measurementId: "G-96WJ75QWLW"
+  apiKey: "AIzaSyAhAJOjQSXmzvo2QnuHb4EIDTK88DCHgm0",
+  authDomain: "territorio-live.firebaseapp.com",
+  projectId: "territorio-live",
+  storageBucket: "territorio-live.firebasestorage.app",
+  messagingSenderId: "1014933311241",
+  appId: "1:1014933311241:web:21cd7b52882677ede58dd8",
+  measurementId: "G-96WJ75QWLW"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const loading =
-    document.getElementById("loading");
+const loading = document.getElementById("loading");
+const dashboard = document.getElementById("dashboard");
+const adminEmail = document.getElementById("adminEmail");
+const logoutBtn = document.getElementById("logoutBtn");
 
-const dashboardContent =
-    document.getElementById("dashboardContent");
+const provinceFilter = document.getElementById("provinceFilter");
+const municipalityFilter = document.getElementById("municipalityFilter");
+const categoryFilter = document.getElementById("categoryFilter");
+const statusFilter = document.getElementById("statusFilter");
+const resetFiltersBtn = document.getElementById("resetFiltersBtn");
+const refreshBtn = document.getElementById("refreshBtn");
+const statsBox = document.getElementById("statsBox");
+const emptyOverlay = document.getElementById("emptyOverlay");
 
-const adminEmail =
-    document.getElementById("adminEmail");
-
-const logoutBtn =
-    document.getElementById("logoutBtn");
-
-const reportsLoading =
-    document.getElementById("reportsLoading");
-
-const reportsList =
-    document.getElementById("reportsList");
+let adminMap = null;
+let mapMarkers = [];
+let reports = [];
 
 function escapeHtml(value){
-
-    return String(value ?? "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 }
 
 function formatDate(timestamp){
+  if(!timestamp){
+    return "-";
+  }
 
-    if(!timestamp){
-        return "-";
+  try{
+    const date =
+      typeof timestamp.toDate === "function"
+        ? timestamp.toDate()
+        : new Date(timestamp);
+
+    if(Number.isNaN(date.getTime())){
+      return "-";
     }
 
-    try{
-
-        const date =
-            typeof timestamp.toDate === "function"
-                ? timestamp.toDate()
-                : new Date(timestamp);
-
-        if(Number.isNaN(date.getTime())){
-            return "-";
-        }
-
-        return date.toLocaleString("it-IT",{
-            day:"2-digit",
-            month:"2-digit",
-            year:"numeric",
-            hour:"2-digit",
-            minute:"2-digit"
-        });
-
-    }catch(error){
-
-        console.error("Errore data:",error);
-        return "-";
-    }
+    return date.toLocaleString("it-IT",{
+      day:"2-digit",
+      month:"2-digit",
+      year:"numeric",
+      hour:"2-digit",
+      minute:"2-digit"
+    });
+  }catch(error){
+    return "-";
+  }
 }
 
-function getStatusClass(status){
+function getCategoryEmoji(category){
+  const icons = {
+    "Buca stradale":"🕳️",
+    "Rifiuti / Discarica abusiva":"🚮",
+    "Veicolo abbandonato":"🚗",
+    "Illuminazione pubblica guasta":"💡",
+    "Segnaletica danneggiata":"🚧",
+    "Materiali pericolosi":"☣️",
+    "Perdita d'acqua":"💧",
+    "Arredo urbano danneggiato":"🧱",
+    "Discarica a cielo aperto":"🏚️",
+    "Sversamento sospetto":"💧",
+    "Albero o ramo pericolante":"🌳",
+    "Incendio":"🔥"
+  };
 
-    const normalized =
-        String(status || "").toLowerCase();
+  return icons[category] || "📍";
+}
+
+function createOpenIcon(category){
+  return L.divIcon({
+    html:`<div class="category-marker">${getCategoryEmoji(category)}</div>`,
+    className:"",
+    iconSize:[44,44],
+    iconAnchor:[22,22],
+    popupAnchor:[0,-18]
+  });
+}
+
+function createResolvedIcon(){
+  return L.divIcon({
+    html:'<div style="font-size:32px;line-height:32px;text-shadow:0 2px 6px rgba(0,0,0,.45)">⭐</div>',
+    className:"",
+    iconSize:[34,34],
+    iconAnchor:[17,17],
+    popupAnchor:[0,-14]
+  });
+}
+
+function uniqueSorted(values){
+  return [...new Set(
+    values
+      .map(value => String(value || "").trim())
+      .filter(Boolean)
+  )].sort((a,b) => a.localeCompare(b,"it"));
+}
+
+function setSelectOptions(selectElement, firstValue, firstLabel, values){
+  const previousValue = selectElement.value;
+
+  selectElement.innerHTML =
+    `<option value="${escapeHtml(firstValue)}">${escapeHtml(firstLabel)}</option>` +
+    values
+      .map(value =>
+        `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`
+      )
+      .join("");
+
+  selectElement.value =
+    [...selectElement.options].some(option => option.value === previousValue)
+      ? previousValue
+      : firstValue;
+}
+
+function rebuildFilters(){
+  const provinces = uniqueSorted(
+    reports.map(report => report.provincia)
+  );
+
+  setSelectOptions(
+    provinceFilter,
+    "Tutte",
+    "Tutte",
+    provinces
+  );
+
+  const selectedProvince = provinceFilter.value;
+
+  const municipalitySource = reports.filter(report => {
+    if(selectedProvince === "Tutte"){
+      return true;
+    }
+
+    return String(report.provincia || "").trim() === selectedProvince;
+  });
+
+  const municipalities = uniqueSorted(
+    municipalitySource.map(report => report.comune)
+  );
+
+  setSelectOptions(
+    municipalityFilter,
+    "Tutti",
+    "Tutti",
+    municipalities
+  );
+
+  const categories = uniqueSorted(
+    reports.map(report => report.categoria)
+  );
+
+  setSelectOptions(
+    categoryFilter,
+    "Tutte",
+    "Tutte",
+    categories
+  );
+}
+
+function getFilteredReports(){
+  const selectedProvince = provinceFilter.value;
+  const selectedMunicipality = municipalityFilter.value;
+  const selectedCategory = categoryFilter.value;
+  const selectedStatus = statusFilter.value;
+
+  return reports.filter(report => {
+    const status = String(report.stato || "aperta").toLowerCase();
+    const isResolved = status === "risolta" || status === "risolto";
 
     if(
-        normalized === "aperta" ||
-        normalized === "attiva"
+      selectedProvince !== "Tutte" &&
+      String(report.provincia || "").trim() !== selectedProvince
     ){
-        return "status-open";
+      return false;
     }
 
     if(
-        normalized === "risolta" ||
-        normalized === "risolto"
+      selectedMunicipality !== "Tutti" &&
+      String(report.comune || "").trim() !== selectedMunicipality
     ){
-        return "status-resolved";
+      return false;
     }
 
-    return "status-other";
+    if(
+      selectedCategory !== "Tutte" &&
+      String(report.categoria || "").trim() !== selectedCategory
+    ){
+      return false;
+    }
+
+    if(selectedStatus === "Aperte" && isResolved){
+      return false;
+    }
+
+    if(selectedStatus === "Risolte" && !isResolved){
+      return false;
+    }
+
+    return true;
+  });
 }
 
-function createReportCard(docSnapshot){
+function createPopupHtml(report){
+  const status = String(report.stato || "aperta").toLowerCase();
+  const isResolved = status === "risolta" || status === "risolto";
 
-    const report = docSnapshot.data();
+  const initialImage =
+    typeof report.immagineBase64 === "string"
+      ? report.immagineBase64.trim()
+      : "";
 
-    const categoria =
-        escapeHtml(report.categoria || "Categoria non indicata");
+  const resolvedImage =
+    typeof report.resolvedImageBase64 === "string"
+      ? report.resolvedImageBase64.trim()
+      : "";
 
-    const comune =
-        escapeHtml(report.comune || "-");
+  return `
+    <div class="popup">
+      <h3>${escapeHtml(report.categoria || "Segnalazione")}</h3>
 
-    const provincia =
-        escapeHtml(report.provincia || "-");
+      <div class="popup-row">
+        <span class="badge ${isResolved ? "badge-resolved" : "badge-open"}">
+          ${isResolved ? "⭐ Risolta" : "📍 Aperta"}
+        </span>
+      </div>
 
-    const regione =
-        escapeHtml(report.regione || "-");
+      <div class="popup-row">
+        <strong>Comune:</strong>
+        ${escapeHtml(report.comune || "-")}
+      </div>
 
-    const indirizzo =
-        escapeHtml(report.indirizzo || "-");
+      <div class="popup-row">
+        <strong>Provincia:</strong>
+        ${escapeHtml(report.provincia || "-")}
+      </div>
 
-    const stato =
-        escapeHtml(report.stato || "-");
+      <div class="popup-row">
+        <strong>Indirizzo:</strong>
+        ${escapeHtml(report.indirizzo || "-")}
+      </div>
 
-    const motivo =
-        escapeHtml(
-            report.moderazioneMotivo ||
-            "Motivo non indicato"
-        );
+      <div class="popup-row">
+        <strong>Data:</strong>
+        ${formatDate(report.createdAt)}
+      </div>
 
-    const conferme =
-        Number(report.conferme || 0);
+      <div class="popup-row">
+        <strong>Conferme:</strong>
+        ${Number(report.conferme || 0)}
+      </div>
 
-    const data =
-        formatDate(report.createdAt);
+      ${Number(report.ricorrenze || 0) > 0
+        ? `<div class="popup-row">
+             <strong>Ricorrenze:</strong>
+             ${Number(report.ricorrenze || 0)}
+           </div>`
+        : ""
+      }
 
-    const immagine =
-        typeof report.immagineBase64 === "string"
-            ? report.immagineBase64.trim()
-            : "";
+      ${Number(report.risoluzioniTotali || 0) > 0
+        ? `<div class="popup-row">
+             <strong>Risoluzioni totali:</strong>
+             ${Number(report.risoluzioniTotali || 0)}
+           </div>`
+        : ""
+      }
 
-    const imageHtml = immagine
-        ? `
-            <img
-                class="report-image"
-                src="${immagine}"
-                alt="Foto della segnalazione"
-            >
-        `
-        : `
-            <div class="report-image-placeholder">
-                Foto non disponibile
-            </div>
-        `;
+      ${initialImage
+        ? `<strong>Foto segnalazione</strong>
+           <img src="${initialImage}" alt="Foto segnalazione">`
+        : ""
+      }
 
-    return `
-        <article class="report-card">
+      ${resolvedImage
+        ? `<strong>Foto risoluzione</strong>
+           <img src="${resolvedImage}" alt="Foto risoluzione">`
+        : ""
+      }
 
-            <div>
-                ${imageHtml}
-            </div>
+      <div class="popup-actions">
+        <a
+          class="map-link"
+          href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(report.lat + "," + report.lng)}"
+          target="_blank"
+          rel="noopener noreferrer">
+          Apri in Google Maps
+        </a>
 
-            <div class="report-content">
-
-                <h4 class="report-category">
-                    ${categoria}
-                </h4>
-
-                <div class="report-row">
-                    <span class="report-label">Comune:</span>
-                    ${comune} (${provincia})
-                </div>
-
-                <div class="report-row">
-                    <span class="report-label">Regione:</span>
-                    ${regione}
-                </div>
-
-                <div class="report-row">
-                    <span class="report-label">Indirizzo:</span>
-                    ${indirizzo}
-                </div>
-
-                <div class="report-row">
-                    <span class="report-label">Data:</span>
-                    ${data}
-                </div>
-
-                <div class="report-row">
-                    <span class="report-label">Stato:</span>
-                    <span class="status-badge ${getStatusClass(report.stato)}">
-                        ${stato}
-                    </span>
-                </div>
-
-                <div class="report-row">
-                    <span class="report-label">Conferme:</span>
-                    ${conferme}
-                </div>
-
-                <div class="moderation-box">
-                    <strong>Motivo del controllo:</strong><br>
-                    ${motivo}
-                </div>
-
-                <div class="report-row">
-                    <span class="report-label">ID:</span>
-                    ${escapeHtml(docSnapshot.id)}
-                </div>
-
-                <div class="report-actions">
-                    <button
-                        type="button"
-                        class="action-approve"
-                        data-action="approve"
-                        data-id="${escapeHtml(docSnapshot.id)}">
-                        Approva
-                    </button>
-
-                    <button
-                        type="button"
-                        class="action-delete"
-                        data-action="delete"
-                        data-id="${escapeHtml(docSnapshot.id)}">
-                        Elimina
-                    </button>
-
-                    ${Number.isFinite(Number(report.lat)) && Number.isFinite(Number(report.lng))
-                        ? `<a
-                            class="action-map"
-                            href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(report.lat + "," + report.lng)}"
-                            target="_blank"
-                            rel="noopener noreferrer">
-                            Apri sulla mappa
-                           </a>`
-                        : `<button type="button" class="action-map" disabled>
-                            Posizione non disponibile
-                           </button>`
-                    }
-                </div>
-
-            </div>
-
-        </article>
-    `;
+        <button
+          class="delete-btn"
+          type="button"
+          onclick="window.deleteAdminReport('${report.id}')">
+          Elimina definitivamente
+        </button>
+      </div>
+    </div>
+  `;
 }
 
-async function caricaSegnalazioni(){
+function renderMap(){
+  mapMarkers.forEach(marker => {
+    adminMap.removeLayer(marker);
+  });
 
-    reportsLoading.style.display = "block";
-    reportsLoading.textContent =
-        "Caricamento segnalazioni...";
+  mapMarkers = [];
 
-    reportsList.innerHTML = "";
+  const filteredReports = getFilteredReports();
+  const bounds = [];
 
-    try{
+  let openCount = 0;
+  let resolvedCount = 0;
 
-        const reportsQuery = query(
-            collection(db,"segnalazioni"),
-            orderBy("createdAt","desc"),
-            limit(100)
-        );
+  filteredReports.forEach(report => {
+    const lat = Number(report.lat);
+    const lng = Number(report.lng);
 
-        const snapshot =
-            await getDocs(reportsQuery);
-
-        reportsLoading.style.display = "none";
-
-        const cards = [];
-
-        snapshot.forEach(docSnapshot => {
-
-            const report = docSnapshot.data();
-
-            const moderationStatus =
-                String(report.moderazioneStato || "").trim();
-
-            // Le vecchie segnalazioni non hanno ancora moderazioneStato.
-            // Vengono trattate come "da_controllare" finché l'admin
-            // non le approva o le elimina.
-            if(
-                moderationStatus &&
-                moderationStatus !== "da_controllare"
-            ){
-                return;
-            }
-
-            cards.push(
-                createReportCard(docSnapshot)
-            );
-        });
-
-        if(cards.length === 0){
-
-            reportsList.innerHTML = `
-                <div class="empty-message">
-                    Nessuna segnalazione da controllare.
-                </div>
-            `;
-
-            return;
-        }
-
-        reportsList.innerHTML =
-            cards.join("");
-
-    }catch(error){
-
-        console.error(
-            "Errore caricamento segnalazioni:",
-            error
-        );
-
-        reportsLoading.style.display = "none";
-
-        reportsList.innerHTML = `
-            <div class="error-message">
-                Errore nel caricamento delle segnalazioni.
-            </div>
-        `;
+    if(!Number.isFinite(lat) || !Number.isFinite(lng)){
+      return;
     }
+
+    const status = String(report.stato || "aperta").toLowerCase();
+    const isResolved = status === "risolta" || status === "risolto";
+
+    if(isResolved){
+      resolvedCount++;
+    }else{
+      openCount++;
+    }
+
+    const marker = L.marker(
+      [lat,lng],
+      {
+        icon:isResolved
+          ? createResolvedIcon()
+          : createOpenIcon(report.categoria)
+      }
+    ).addTo(adminMap);
+
+    marker.bindPopup(
+      createPopupHtml(report),
+      {
+        maxWidth:300
+      }
+    );
+
+    mapMarkers.push(marker);
+    bounds.push([lat,lng]);
+  });
+
+  emptyOverlay.style.display =
+    mapMarkers.length === 0
+      ? "flex"
+      : "none";
+
+  statsBox.innerHTML = `
+    <strong>Visibili: ${mapMarkers.length}</strong><br>
+    🔴 Aperte: ${openCount}<br>
+    ⭐ Risolte: ${resolvedCount}
+  `;
+
+  if(bounds.length === 1){
+    adminMap.setView(bounds[0],16);
+  }else if(bounds.length > 1){
+    adminMap.fitBounds(bounds,{
+      padding:[35,35],
+      maxZoom:16
+    });
+  }
 }
 
-reportsList.addEventListener("click", async event => {
+async function loadReports(){
+  refreshBtn.disabled = true;
+  refreshBtn.textContent = "…";
+  statsBox.textContent = "Caricamento...";
 
-    const button = event.target.closest("button[data-action]");
+  try{
+    const reportsQuery = query(
+      collection(db,"segnalazioni"),
+      orderBy("createdAt","desc")
+    );
 
-    if(!button){
-        return;
+    const snapshot = await getDocs(reportsQuery);
+
+    reports = snapshot.docs.map(docSnapshot => ({
+      id:docSnapshot.id,
+      ...docSnapshot.data()
+    }));
+
+    rebuildFilters();
+    renderMap();
+
+  }catch(error){
+    console.error("Errore caricamento:",error);
+    statsBox.innerHTML = "Errore nel caricamento.";
+    alert("Errore nel caricamento delle segnalazioni.");
+  }
+
+  refreshBtn.disabled = false;
+  refreshBtn.textContent = "↻";
+}
+
+window.deleteAdminReport = async function(reportId){
+  const confirmed = confirm(
+    "Vuoi eliminare definitivamente questa segnalazione?\n\n" +
+    "L'operazione cancella anche lo storico e non può essere annullata."
+  );
+
+  if(!confirmed){
+    return;
+  }
+
+  try{
+    await deleteDoc(
+      doc(db,"segnalazioni",reportId)
+    );
+
+    await loadReports();
+
+  }catch(error){
+    console.error("Errore eliminazione:",error);
+    alert("Eliminazione non riuscita.");
+  }
+};
+
+function initMap(){
+  if(adminMap){
+    return;
+  }
+
+  adminMap = L.map("adminMap").setView(
+    [41.1171,16.8719],
+    10
+  );
+
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      maxZoom:19,
+      attribution:"© OpenStreetMap"
+    }
+  ).addTo(adminMap);
+}
+
+provinceFilter.addEventListener("change",() => {
+  const selectedProvince = provinceFilter.value;
+
+  const municipalitySource = reports.filter(report => {
+    if(selectedProvince === "Tutte"){
+      return true;
     }
 
-    const reportId = button.dataset.id;
-    const action = button.dataset.action;
+    return String(report.provincia || "").trim() === selectedProvince;
+  });
 
-    if(!reportId){
-        return;
-    }
+  const municipalities = uniqueSorted(
+    municipalitySource.map(report => report.comune)
+  );
 
-    if(action === "approve"){
+  setSelectOptions(
+    municipalityFilter,
+    "Tutti",
+    "Tutti",
+    municipalities
+  );
 
-        const conferma = confirm(
-            "Vuoi approvare questa segnalazione e rimuoverla dalla coda di moderazione?"
-        );
+  renderMap();
+});
 
-        if(!conferma){
-            return;
-        }
+municipalityFilter.addEventListener("change",renderMap);
+categoryFilter.addEventListener("change",renderMap);
+statusFilter.addEventListener("change",renderMap);
 
-        button.disabled = true;
-        button.textContent = "Approvazione...";
+resetFiltersBtn.addEventListener("click",() => {
+  provinceFilter.value = "Tutte";
 
-        try{
+  const municipalities = uniqueSorted(
+    reports.map(report => report.comune)
+  );
 
-            await updateDoc(
-                doc(db,"segnalazioni",reportId),
-                {
-                    moderazioneStato:"approvata",
-                    moderazioneMotivo:"",
-                    moderazioneAggiornataAt:serverTimestamp(),
-                    moderazioneAggiornataDa:auth.currentUser?.uid || ""
-                }
-            );
+  setSelectOptions(
+    municipalityFilter,
+    "Tutti",
+    "Tutti",
+    municipalities
+  );
 
-            await caricaSegnalazioni();
+  municipalityFilter.value = "Tutti";
+  categoryFilter.value = "Tutte";
+  statusFilter.value = "Tutte";
 
-        }catch(error){
+  renderMap();
+});
 
-            console.error("Errore approvazione:",error);
-            button.disabled = false;
-            button.textContent = "Approva";
-            alert("Approvazione non riuscita.");
-        }
+refreshBtn.addEventListener("click",loadReports);
 
-        return;
-    }
+logoutBtn.addEventListener("click",async () => {
+  logoutBtn.disabled = true;
+  logoutBtn.textContent = "Uscita...";
 
-    if(action === "delete"){
-
-        const conferma = confirm(
-            "Vuoi eliminare definitivamente questa segnalazione? L'operazione non può essere annullata."
-        );
-
-        if(!conferma){
-            return;
-        }
-
-        button.disabled = true;
-        button.textContent = "Eliminazione...";
-
-        try{
-
-            await deleteDoc(
-                doc(db,"segnalazioni",reportId)
-            );
-
-            await caricaSegnalazioni();
-
-        }catch(error){
-
-            console.error("Errore eliminazione:",error);
-            button.disabled = false;
-            button.textContent = "Elimina";
-            alert("Eliminazione non riuscita.");
-        }
-    }
+  try{
+    await signOut(auth);
+    window.location.replace("./index.html");
+  }catch(error){
+    logoutBtn.disabled = false;
+    logoutBtn.textContent = "Esci";
+    alert("Logout non riuscito.");
+  }
 });
 
 onAuthStateChanged(auth,user => {
+  if(!user){
+    window.location.replace("./index.html");
+    return;
+  }
 
-    if(!user){
+  adminEmail.textContent =
+    "Account: " + (user.email || "Amministratore");
 
-        window.location.replace("./index.html");
-        return;
-    }
+  loading.style.display = "none";
+  dashboard.style.display = "block";
 
-    adminEmail.textContent =
-        "Account: " + (user.email || "Amministratore");
+  initMap();
 
-    loading.style.display = "none";
-    dashboardContent.style.display = "block";
-
-    caricaSegnalazioni();
-});
-
-logoutBtn.addEventListener("click",async () => {
-
-    logoutBtn.disabled = true;
-    logoutBtn.textContent = "Uscita...";
-
-    try{
-
-        await signOut(auth);
-
-        window.location.replace("./index.html");
-
-    }catch(error){
-
-        console.error(
-            "Errore logout:",
-            error
-        );
-
-        logoutBtn.disabled = false;
-        logoutBtn.textContent = "Esci";
-
-        alert("Logout non riuscito.");
-    }
+  setTimeout(() => {
+    adminMap.invalidateSize();
+    loadReports();
+  },150);
 });
 
 </script>
