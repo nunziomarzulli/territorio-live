@@ -429,6 +429,49 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 }
 .resolved-label{display:inline-block;background:#f9a825;color:#111;padding:4px 7px;border-radius:8px;font-weight:bold;margin-top:4px}
 .open-label{display:inline-block;background:#c62828;color:white;padding:4px 7px;border-radius:8px;font-weight:bold;margin-top:4px}
+
+#resolvePhotoOverlay{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  box-sizing:border-box;
+  background:rgba(0,0,0,.68);
+  z-index:5000;
+}
+
+#resolvePhotoOverlay.active{
+  display:flex;
+}
+
+#resolvePhotoBox{
+  width:100%;
+  max-width:420px;
+  background:white;
+  color:#222;
+  border-radius:16px;
+  padding:22px;
+  box-sizing:border-box;
+  text-align:center;
+  box-shadow:0 8px 30px rgba(0,0,0,.38);
+}
+
+#resolvePhotoBox h3{
+  margin:0 0 10px;
+}
+
+#resolvePhotoBox p{
+  margin:0 0 18px;
+  line-height:1.45;
+}
+
+#openResolveCameraBtn,
+#cancelResolveCameraBtn{
+  width:100%;
+  margin-top:10px;
+}
 </style>
 </head>
 
@@ -683,7 +726,23 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 
   </div>
 
-</section>    
+</section>
+
+<div id="resolvePhotoOverlay" role="dialog" aria-modal="true" aria-labelledby="resolvePhotoTitle">
+  <div id="resolvePhotoBox">
+    <h3 id="resolvePhotoTitle">Posizione verificata</h3>
+    <p>Ora scatta una foto che dimostri la risoluzione del problema.</p>
+
+    <button id="openResolveCameraBtn" class="resolve" type="button">
+      📸 Scatta foto della risoluzione
+    </button>
+
+    <button id="cancelResolveCameraBtn" class="secondary" type="button">
+      Annulla
+    </button>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script type="module">
@@ -794,7 +853,10 @@ const howItWorksScreen = document.getElementById("howItWorksScreen");
 const backFromHowItWorksBtn = document.getElementById("backFromHowItWorksBtn");  
 const contactManagerBtn = document.getElementById("contactManagerBtn");
 const contactScreen = document.getElementById("contactScreen");
-const backFromContactBtn = document.getElementById("backFromContactBtn");    
+const backFromContactBtn = document.getElementById("backFromContactBtn");
+const resolvePhotoOverlay = document.getElementById("resolvePhotoOverlay");
+const openResolveCameraBtn = document.getElementById("openResolveCameraBtn");
+const cancelResolveCameraBtn = document.getElementById("cancelResolveCameraBtn");
 const categoryButtons = document.querySelectorAll(".categoryBtn");
 const aiSuggestion = document.getElementById("aiSuggestion");
 
@@ -853,6 +915,17 @@ window.addEventListener("load", () => {
 
 cameraBtn.onclick = () => {
   camera.click();
+};
+
+openResolveCameraBtn.onclick = () => {
+  resolvePhotoOverlay.classList.remove("active");
+  resolveCamera.click();
+};
+
+cancelResolveCameraBtn.onclick = () => {
+  resolvePhotoOverlay.classList.remove("active");
+  reportToResolveId = null;
+  resolveCamera.value = "";
 };
 
 async function blurFaces(base64Image) {
@@ -2071,9 +2144,9 @@ window.startResolveReport = function(reportId){
 
             reportToResolveId = reportId;
 
-            alert("Posizione verificata. Scatta la foto della risoluzione.");
-
-            resolveCamera.click();
+            // Su iPhone la fotocamera può essere aperta solo da un nuovo
+            // tocco diretto dell'utente, non dopo il callback asincrono GPS.
+            resolvePhotoOverlay.classList.add("active");
 
         },
 
@@ -2211,6 +2284,7 @@ function resetReport(){
   manualBlurBtn.disabled = false;
   continueBtn.disabled = false;
   privacyProcessingOverlay.classList.remove("active");
+  resolvePhotoOverlay.classList.remove("active");
   privacyProcessingStatus.textContent = "Preparazione dell’immagine...";
   selectionBox.style.display = "none";
 
