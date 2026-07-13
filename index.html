@@ -1857,7 +1857,10 @@ async function loadMyReports(){
   myReportsList.innerHTML = '<p>Caricamento...</p>';
 
   try {
-    const currentUid = await getCurrentUid();
+    // Non bloccare la sezione se l'autenticazione anonima non è ancora pronta.
+    // Le vecchie segnalazioni restano riconoscibili tramite legacyOwnerId.
+    const authenticatedUser = await authenticationReady;
+    const currentUid = authenticatedUser ? authenticatedUser.uid : null;
 
     const q = query(
       collection(db, "segnalazioni"),
@@ -1871,7 +1874,7 @@ async function loadMyReports(){
       const data = docSnap.data();
 
       if (
-        data.ownerUid === currentUid ||
+        (currentUid && data.ownerUid === currentUid) ||
         (!data.ownerUid && data.ownerId === legacyOwnerId)
       ) {
         myReports.push({
@@ -1953,15 +1956,17 @@ async function loadMyReports(){
             : ""
           }
 
-          ${report.ownerUid === currentUid
+          ${currentUid && report.ownerUid === currentUid
             ? `<button
                 class="danger"
                 onclick="window.deleteReport('${report.id}')">
                 Elimina segnalazione
               </button>`
             : `<p style="font-size:13px;color:#666">
-                Segnalazione precedente all'aggiornamento di sicurezza:
-                può essere eliminata solo dall'amministratore.
+                ${report.ownerUid
+                  ? "Autenticazione del dispositivo non disponibile: ricarica la pagina per abilitare l’eliminazione."
+                  : "Segnalazione precedente all’aggiornamento di sicurezza: può essere eliminata solo dall’amministratore."
+                }
               </p>`
           }
         </div>
@@ -1971,9 +1976,14 @@ async function loadMyReports(){
   } catch (error) {
     console.error("Errore caricamento mie segnalazioni:", error);
 
+    const errorCode = error && error.code ? error.code : "";
+    const errorMessage = error && error.message ? error.message : "Errore sconosciuto";
+
     myReportsList.innerHTML = `
       <div class="my-report-empty">
-        Errore durante il caricamento delle segnalazioni.
+        <strong>Errore durante il caricamento delle segnalazioni.</strong><br><br>
+        ${errorCode ? `<strong>Codice:</strong> ${escapeHtml(errorCode)}<br>` : ""}
+        <strong>Dettaglio:</strong> ${escapeHtml(errorMessage)}
       </div>
     `;
   }
