@@ -1464,6 +1464,46 @@ function createOpenIcon(category){
   });
 }
 
+function populateCategoryFilter(reports){
+  const categories = [
+    { value: "Buca stradale", label: "🕳️ Buche" },
+    { value: "Rifiuti / Discarica abusiva", label: "🚮 Rifiuti" },
+    { value: "Veicolo abbandonato", label: "🚗 Veicoli" },
+    { value: "Illuminazione pubblica guasta", label: "💡 Illuminazione" },
+    { value: "Segnaletica danneggiata", label: "🚧 Segnaletica" },
+    { value: "Materiali pericolosi", label: "☣️ Materiali" },
+    { value: "Perdita d'acqua", label: "💧 Perdite" },
+    { value: "Arredo urbano danneggiato", label: "🧱 Arredo urbano" }
+  ];
+
+  const reportsForMunicipality = reports.filter(report => {
+    if (currentMunicipalityFilter === "Tutti") return true;
+
+    return String(report.comune || "").trim() === currentMunicipalityFilter;
+  });
+
+  const totalCount = reportsForMunicipality.length;
+  const previousValue = currentCategoryFilter;
+
+  categoryFilter.innerHTML =
+    `<option value="Tutte">Tutte (${totalCount})</option>` +
+    categories.map(item => {
+      const count = reportsForMunicipality.filter(
+        report => report.categoria === item.value
+      ).length;
+
+      return `<option value="${escapeHtml(item.value)}">${item.label} (${count})</option>`;
+    }).join("");
+
+  const validValues = ["Tutte", ...categories.map(item => item.value)];
+
+  currentCategoryFilter = validValues.includes(previousValue)
+    ? previousValue
+    : "Tutte";
+
+  categoryFilter.value = currentCategoryFilter;
+}
+
 function populateMunicipalityFilter(reports){
   const municipalities = [...new Set(
     reports
@@ -1513,6 +1553,7 @@ async function loadReportsFromFirestore(){
     }));
 
     populateMunicipalityFilter(reports);
+    populateCategoryFilter(reports);
 
     reports.forEach(data => {
       if (!data.lat || !data.lng) return;
@@ -1857,6 +1898,8 @@ window.confirmReport = async function(reportId){
 
 municipalityFilter.onchange = async () => {
   currentMunicipalityFilter = municipalityFilter.value;
+  currentCategoryFilter = "Tutte";
+  categoryFilter.value = "Tutte";
   await loadReportsFromFirestore();
 };
 
