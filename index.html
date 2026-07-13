@@ -693,6 +693,10 @@ import {
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/+esm";    
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import {
+  getAuth,
+  signInAnonymously
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+import {
   getFirestore,
   collection,
   addDoc,
@@ -752,6 +756,22 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+async function ensureAuthenticatedUser() {
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+
+  const credential = await signInAnonymously(auth);
+  return credential.user;
+}
+
+// Avvia subito l'autenticazione invisibile del dispositivo.
+const authenticationReady = ensureAuthenticatedUser().catch(error => {
+  console.error("Errore autenticazione anonima:", error);
+  return null;
+});
 
 const camera = document.getElementById("camera");
 const resolveCamera = document.getElementById("resolveCamera");
@@ -822,11 +842,23 @@ let currentMunicipalityFilter = "Tutti";
 let currentCategoryFilter = "Tutte";
 const MAX_RESOLVE_DISTANCE_METERS = 30;
   
-let ownerId = localStorage.getItem("territorioLiveOwnerId");
+// Conservato solo per mostrare eventuali vecchie segnalazioni create
+// prima dell'introduzione dell'autenticazione anonima Firebase.
+let legacyOwnerId = localStorage.getItem("territorioLiveOwnerId");
 
-if (!ownerId) {
-ownerId = Date.now().toString() + Math.random().toString(36).substring(2);
-  localStorage.setItem("territorioLiveOwnerId", ownerId);
+if (!legacyOwnerId) {
+  legacyOwnerId = Date.now().toString() + Math.random().toString(36).substring(2);
+  localStorage.setItem("territorioLiveOwnerId", legacyOwnerId);
+}
+
+async function getCurrentUid() {
+  const user = await authenticationReady;
+
+  if (!user) {
+    throw new Error("Autenticazione del dispositivo non disponibile.");
+  }
+
+  return user.uid;
 }
 
 function showScreen(screen){
@@ -1140,12 +1172,13 @@ resolveCamera.onchange = async () => {
 
   try {
     const resolvedImageBase64 = await compressImage(file);
+    const currentUid = await getCurrentUid();
 
     await updateDoc(doc(db, "segnalazioni", reportToResolveId), {
       stato: "risolta",
       resolvedAt: serverTimestamp(),
       resolvedImageBase64: resolvedImageBase64,
-      resolvedBy: ownerId
+      resolvedByUid: currentUid
     });
 
     alert("Segnalazione marcata come risolta.");
@@ -1379,6 +1412,7 @@ sendBtn.onclick = async () => {
   sendBtn.textContent = "Rilevamento indirizzo...";
 
   try {
+    const currentUid = await getCurrentUid();
     const locationData = await reverseGeocode(currentLat, currentLng);
 
     sendBtn.textContent = "Invio in corso...";
@@ -1391,7 +1425,7 @@ sendBtn.onclick = async () => {
       stato: "aperta",
       conferme: 0,
       confirmedBy: [],
-      ownerId: ownerId,
+      ownerUid: currentUid,
       indirizzo: locationData.indirizzo,
       comune: locationData.comune,
       provincia: locationData.provincia,
@@ -1665,6 +1699,7 @@ async function loadReportsFromFirestore(){
   let resolvedCount = 0;
 
   try {
+    const currentUid = await getCurrentUid();
     const q = query(collection(db, "segnalazioni"), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
 
@@ -1769,7 +1804,7 @@ async function loadReportsFromFirestore(){
 
           <br>
 
-         ${!isResolved && data.ownerId !== ownerId && !(data.confirmedBy || []).includes(ownerId)
+         ${!isResolved && data.ownerUid !== currentUid && !(data.confirmedBy || []).includes(currentUid)
   ? `<button class="primary" onclick="window.confirmReport('${reportId}')">Conferma segnalazione</button>`
   : ""
 }
@@ -1779,7 +1814,7 @@ ${!isResolved
   : ""
 }
 
-${data.ownerId === ownerId
+${data.ownerUid === currentUid
   ? `<button class="danger" onclick="window.deleteReport('${reportId}')">Elimina segnalazione</button>`
   : ""
 }
@@ -1810,6 +1845,8 @@ async function loadMyReports(){
   myReportsList.innerHTML = '<p>Caricamento...</p>';
 
   try {
+    const currentUid = await getCurrentUid();
+
     const q = query(
       collection(db, "segnalazioni"),
       orderBy("createdAt", "desc")
@@ -1821,7 +1858,10 @@ async function loadMyReports(){
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
 
-      if (data.ownerId === ownerId) {
+      if (
+        data.ownerUid === currentUid ||
+        (!data.ownerUid && data.ownerId === legacyOwnerId)
+      ) {
         myReports.push({
           id: docSnap.id,
           ...data
@@ -1901,11 +1941,17 @@ async function loadMyReports(){
             : ""
           }
 
-          <button
-            class="danger"
-            onclick="window.deleteReport('${report.id}')">
-            Elimina segnalazione
-          </button>
+          ${report.ownerUid === currentUid
+            ? `<button
+                class="danger"
+                onclick="window.deleteReport('${report.id}')">
+                Elimina segnalazione
+              </button>`
+            : `<p style="font-size:13px;color:#666">
+                Segnalazione precedente all'aggiornamento di sicurezza:
+                può essere eliminata solo dall'amministratore.
+              </p>`
+          }
         </div>
       `;
     }).join("");
@@ -2003,9 +2049,11 @@ window.deleteReport = async function(reportId){
 
 window.confirmReport = async function(reportId){
   try {
+    const currentUid = await getCurrentUid();
+
     await updateDoc(doc(db,"segnalazioni",reportId), {
       conferme: increment(1),
-      confirmedBy: arrayUnion(ownerId)
+      confirmedBy: arrayUnion(currentUid)
     });
 
     alert("Segnalazione confermata.");
