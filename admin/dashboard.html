@@ -478,11 +478,12 @@ async function caricaSegnalazioni(){
 
     try{
 
-        const reportsQuery = query(
-            collection(db,"segnalazioni"),
-            orderBy("createdAt","desc"),
-            limit(20)
-        );
+     const reportsQuery = query(
+    collection(db,"segnalazioni"),
+    where("moderazioneStato","==","da_controllare"),
+    orderBy("createdAt","desc"),
+    limit(50)
+); 
 
         const snapshot =
             await getDocs(reportsQuery);
