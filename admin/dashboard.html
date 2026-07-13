@@ -143,6 +143,14 @@ main{
     font-weight:bold;
 }
 
+.moderation-box{
+    margin-top:12px;
+    padding:12px;
+    border-radius:9px;
+    background:#542121;
+    color:#ffb2b2;
+}
+
 .status-badge{
     display:inline-block;
     padding:5px 9px;
@@ -172,6 +180,14 @@ main{
     border-radius:10px;
     background:#4a1f1f;
     color:#ff9b9b;
+}
+
+.empty-message{
+    padding:18px;
+    border-radius:10px;
+    background:#252525;
+    color:#bbb;
+    text-align:center;
 }
 
 @media(max-width:700px){
@@ -232,7 +248,7 @@ main{
 
             <hr class="divider">
 
-            <h3>Ultime segnalazioni</h3>
+            <h3>Segnalazioni da controllare</h3>
 
             <div id="reportsLoading">
                 Caricamento segnalazioni...
@@ -387,6 +403,12 @@ function createReportCard(docSnapshot){
     const stato =
         escapeHtml(report.stato || "-");
 
+    const motivo =
+        escapeHtml(
+            report.moderazioneMotivo ||
+            "Motivo non indicato"
+        );
+
     const conferme =
         Number(report.conferme || 0);
 
@@ -457,6 +479,11 @@ function createReportCard(docSnapshot){
                     ${conferme}
                 </div>
 
+                <div class="moderation-box">
+                    <strong>Motivo del controllo:</strong><br>
+                    ${motivo}
+                </div>
+
                 <div class="report-row">
                     <span class="report-label">ID:</span>
                     ${escapeHtml(docSnapshot.id)}
@@ -478,33 +505,45 @@ async function caricaSegnalazioni(){
 
     try{
 
-     const reportsQuery = query(
-    collection(db,"segnalazioni"),
-    where("moderazioneStato","==","da_controllare"),
-    orderBy("createdAt","desc"),
-    limit(50)
-); 
+        const reportsQuery = query(
+            collection(db,"segnalazioni"),
+            orderBy("createdAt","desc"),
+            limit(100)
+        );
 
         const snapshot =
             await getDocs(reportsQuery);
 
         reportsLoading.style.display = "none";
 
-        if(snapshot.empty){
-
-            reportsList.innerHTML =
-                "<p>Nessuna segnalazione trovata.</p>";
-
-            return;
-        }
-
         const cards = [];
 
         snapshot.forEach(docSnapshot => {
+
+            const report = docSnapshot.data();
+
+            if(
+                report.moderazioneStato !==
+                "da_controllare"
+            ){
+                return;
+            }
+
             cards.push(
                 createReportCard(docSnapshot)
             );
         });
+
+        if(cards.length === 0){
+
+            reportsList.innerHTML = `
+                <div class="empty-message">
+                    Nessuna segnalazione da controllare.
+                </div>
+            `;
+
+            return;
+        }
 
         reportsList.innerHTML =
             cards.join("");
