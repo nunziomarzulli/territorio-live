@@ -298,7 +298,77 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 #exploreTopBar{width:100%;height:112px;background:white;display:flex;align-items:center;justify-content:space-between;padding:6px 10px;box-sizing:border-box;border-bottom:1px solid #ddd;z-index:999;gap:8px}
 #exploreTitleBox{display:flex;flex-direction:column;align-items:center;font-size:13px;line-height:1.35}
 
-#municipalityFilter,
+#municipalitySearchWrap{
+  position:relative;
+  width:175px;
+  max-width:48vw;
+  margin-top:4px;
+}
+
+#municipalitySearch{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid #ccc;
+  border-radius:10px;
+  padding:8px 30px 8px 9px;
+  background:white;
+  font-size:13px;
+  font-weight:bold;
+  color:#222;
+}
+
+#clearMunicipalitySearch{
+  position:absolute;
+  right:5px;
+  top:50%;
+  transform:translateY(-50%);
+  width:24px;
+  height:24px;
+  padding:0;
+  border-radius:50%;
+  background:#ddd;
+  color:#222;
+  font-size:14px;
+  line-height:24px;
+  display:none;
+}
+
+#municipalitySuggestions{
+  position:absolute;
+  top:39px;
+  left:0;
+  right:0;
+  display:none;
+  max-height:210px;
+  overflow-y:auto;
+  background:white;
+  border:1px solid #ccc;
+  border-radius:10px;
+  box-shadow:0 4px 14px rgba(0,0,0,.22);
+  z-index:2000;
+  text-align:left;
+}
+
+.municipality-suggestion{
+  width:100%;
+  border:none;
+  border-bottom:1px solid #eee;
+  border-radius:0;
+  background:white;
+  color:#222;
+  padding:10px;
+  font-size:14px;
+  text-align:left;
+}
+
+.municipality-suggestion:last-child{
+  border-bottom:none;
+}
+
+.municipality-suggestion:hover{
+  background:#f1f8e9;
+}
+
 #categoryFilter{
   width:175px;
   max-width:48vw;
@@ -309,10 +379,6 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
   font-size:13px;
   font-weight:bold;
   color:#222;
-}
-
-#municipalityFilter{
-  margin-top:4px;
 }
 
 .category-map-marker{
@@ -471,9 +537,23 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
  <div id="exploreTitleBox">
     <strong>Mappa segnalazioni</strong>
 
-    <select id="municipalityFilter" aria-label="Filtra per Comune">
-      <option value="Tutti">Tutti i Comuni</option>
-    </select>
+    <div id="municipalitySearchWrap">
+      <input
+        id="municipalitySearch"
+        type="text"
+        placeholder="🔍 Cerca Comune..."
+        autocomplete="off"
+        aria-label="Cerca Comune">
+
+      <button
+        id="clearMunicipalitySearch"
+        type="button"
+        aria-label="Mostra tutti i Comuni">
+        ×
+      </button>
+
+      <div id="municipalitySuggestions"></div>
+    </div>
 
     <select id="categoryFilter" aria-label="Filtra per categoria">
       <option value="Tutte">Tutte</option>
@@ -700,7 +780,9 @@ const backToMapBtn = document.getElementById("backToMapBtn");
 const backHomeBtn = document.getElementById("backHomeBtn");
 const newReportBtn = document.getElementById("newReportBtn");
 const statsBox = document.getElementById("statsBox");
-const municipalityFilter = document.getElementById("municipalityFilter");
+const municipalitySearch = document.getElementById("municipalitySearch");
+const clearMunicipalitySearch = document.getElementById("clearMunicipalitySearch");
+const municipalitySuggestions = document.getElementById("municipalitySuggestions");
 const categoryFilter = document.getElementById("categoryFilter");
 const myReportsBtn = document.getElementById("myReportsBtn");
 const myReportsScreen = document.getElementById("myReportsScreen");
@@ -734,6 +816,7 @@ let currentLat = null;
 let currentLng = null;
 let reportToResolveId = null;
 let reportsCache = {};
+let availableMunicipalities = [];
 let currentMunicipalityFilter = "Tutti";
 let currentCategoryFilter = "Tutte";
 const MAX_RESOLVE_DISTANCE_METERS = 30;
@@ -1331,7 +1414,9 @@ sendBtn.onclick = async () => {
 openMapBtn.onclick = () => {
   currentMunicipalityFilter = "Tutti";
   currentCategoryFilter = "Tutte";
-  municipalityFilter.value = "Tutti";
+  municipalitySearch.value = "";
+  clearMunicipalitySearch.style.display = "none";
+  municipalitySuggestions.style.display = "none";
   categoryFilter.value = "Tutte";
   showScreen(exploreScreen);
 
@@ -1504,31 +1589,66 @@ function populateCategoryFilter(reports){
   categoryFilter.value = currentCategoryFilter;
 }
 
-function populateMunicipalityFilter(reports){
-  const municipalities = [...new Set(
+function populateMunicipalitySearch(reports){
+  availableMunicipalities = [...new Set(
     reports
       .map(report => String(report.comune || "").trim())
       .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b, "it"));
 
-  const previousValue = currentMunicipalityFilter;
-
-  municipalityFilter.innerHTML =
-    '<option value="Tutti">Tutti i Comuni</option>' +
-    municipalities
-      .map(comune => {
-        const safeComune = escapeHtml(comune);
-        return `<option value="${safeComune}">${safeComune}</option>`;
-      })
-      .join("");
-
-  const stillExists =
-    previousValue === "Tutti" ||
-    municipalities.includes(previousValue);
-
-  currentMunicipalityFilter = stillExists ? previousValue : "Tutti";
-  municipalityFilter.value = currentMunicipalityFilter;
+  if (
+    currentMunicipalityFilter !== "Tutti" &&
+    !availableMunicipalities.includes(currentMunicipalityFilter)
+  ) {
+    currentMunicipalityFilter = "Tutti";
+    municipalitySearch.value = "";
+    clearMunicipalitySearch.style.display = "none";
+  }
 }
+
+function renderMunicipalitySuggestions(searchText){
+  const queryText = String(searchText || "").trim().toLocaleLowerCase("it");
+
+  const matches = availableMunicipalities.filter(comune =>
+    comune.toLocaleLowerCase("it").includes(queryText)
+  );
+
+  if (matches.length === 0) {
+    municipalitySuggestions.innerHTML =
+      '<div style="padding:10px;color:#666;font-size:13px">Nessun Comune trovato</div>';
+    municipalitySuggestions.style.display = "block";
+    return;
+  }
+
+  municipalitySuggestions.innerHTML = matches
+    .slice(0, 20)
+    .map(comune => `
+      <button
+        type="button"
+        class="municipality-suggestion"
+        data-comune="${escapeHtml(comune)}">
+        ${escapeHtml(comune)}
+      </button>
+    `)
+    .join("");
+
+  municipalitySuggestions.style.display = "block";
+
+  municipalitySuggestions
+    .querySelectorAll(".municipality-suggestion")
+    .forEach(button => {
+      button.onclick = async () => {
+        currentMunicipalityFilter = button.dataset.comune;
+        currentCategoryFilter = "Tutte";
+        municipalitySearch.value = currentMunicipalityFilter;
+        clearMunicipalitySearch.style.display = "block";
+        municipalitySuggestions.style.display = "none";
+        await loadReportsFromFirestore();
+      };
+    });
+}
+
+
 
 async function loadReportsFromFirestore(){
   if (!exploreMap) return;
@@ -1552,7 +1672,7 @@ async function loadReportsFromFirestore(){
       ...docSnap.data()
     }));
 
-    populateMunicipalityFilter(reports);
+    populateMunicipalitySearch(reports);
     populateCategoryFilter(reports);
 
     reports.forEach(data => {
@@ -1896,12 +2016,51 @@ window.confirmReport = async function(reportId){
   }
 };
 
-municipalityFilter.onchange = async () => {
-  currentMunicipalityFilter = municipalityFilter.value;
+municipalitySearch.onfocus = () => {
+  renderMunicipalitySuggestions(municipalitySearch.value);
+};
+
+municipalitySearch.oninput = () => {
+  renderMunicipalitySuggestions(municipalitySearch.value);
+};
+
+municipalitySearch.onkeydown = async event => {
+  if (event.key === "Enter") {
+    const typedValue = municipalitySearch.value.trim();
+
+    const exactMatch = availableMunicipalities.find(
+      comune => comune.toLocaleLowerCase("it") === typedValue.toLocaleLowerCase("it")
+    );
+
+    if (exactMatch) {
+      currentMunicipalityFilter = exactMatch;
+      currentCategoryFilter = "Tutte";
+      municipalitySearch.value = exactMatch;
+      clearMunicipalitySearch.style.display = "block";
+      municipalitySuggestions.style.display = "none";
+      await loadReportsFromFirestore();
+    }
+  }
+
+  if (event.key === "Escape") {
+    municipalitySuggestions.style.display = "none";
+  }
+};
+
+clearMunicipalitySearch.onclick = async () => {
+  currentMunicipalityFilter = "Tutti";
   currentCategoryFilter = "Tutte";
-  categoryFilter.value = "Tutte";
+  municipalitySearch.value = "";
+  clearMunicipalitySearch.style.display = "none";
+  municipalitySuggestions.style.display = "none";
   await loadReportsFromFirestore();
 };
+
+document.addEventListener("click", event => {
+  if (!document.getElementById("municipalitySearchWrap").contains(event.target)) {
+    municipalitySuggestions.style.display = "none";
+  }
+});
 
 categoryFilter.onchange = async () => {
   currentCategoryFilter = categoryFilter.value;
