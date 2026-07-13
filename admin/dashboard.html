@@ -592,9 +592,15 @@ async function caricaSegnalazioni(){
 
             const report = docSnapshot.data();
 
+            const moderationStatus =
+                String(report.moderazioneStato || "").trim();
+
+            // Le vecchie segnalazioni non hanno ancora moderazioneStato.
+            // Vengono trattate come "da_controllare" finché l'admin
+            // non le approva o le elimina.
             if(
-                report.moderazioneStato !==
-                "da_controllare"
+                moderationStatus &&
+                moderationStatus !== "da_controllare"
             ){
                 return;
             }
