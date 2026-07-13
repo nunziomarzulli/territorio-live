@@ -166,8 +166,64 @@ onAuthStateChanged(auth, user => {
 
     loading.style.display = "none";
     dashboardContent.style.display = "block";
+    caricaSegnalazioni();
 });
+ 
+async function caricaSegnalazioni(){
 
+    reportsLoading.style.display = "block";
+    reportsList.innerHTML = "";
+
+    try{
+
+        const q = query(
+            collection(db,"segnalazioni"),
+            orderBy("createdAt","desc"),
+            limit(20)
+        );
+
+        const snapshot = await getDocs(q);
+
+        reportsLoading.style.display = "none";
+
+        if(snapshot.empty){
+
+            reportsList.innerHTML =
+                "<p>Nessuna segnalazione trovata.</p>";
+
+            return;
+        }
+
+        snapshot.forEach(doc=>{
+
+            const s = doc.data();
+
+            reportsList.innerHTML += `
+                <div style="
+                    background:#2a2a2a;
+                    border-radius:10px;
+                    padding:15px;
+                    margin-bottom:15px;
+                ">
+                    <b>${s.categoria}</b><br>
+                    ${s.comune || "-"} (${s.provincia || "-"})<br>
+                    Stato: ${s.stato}<br>
+                    Conferme: ${s.conferme || 0}
+                </div>
+            `;
+
+        });
+
+    }catch(err){
+
+        console.error(err);
+
+        reportsLoading.innerHTML =
+            "Errore nel caricamento.";
+
+    }
+
+}
 logoutBtn.addEventListener("click", async () => {
 
     try{
