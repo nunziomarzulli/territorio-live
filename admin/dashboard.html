@@ -1,9 +1,159 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
 <head>
-    <title>Dashboard - Territorio Live</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Dashboard Gestore - Territorio Live</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial,Helvetica,sans-serif;
+    background:#111;
+    color:white;
+}
+
+header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:18px 24px;
+    background:#1d1d1d;
+    border-bottom:1px solid #333;
+}
+
+h1{
+    margin:0;
+    font-size:24px;
+    color:#39d353;
+}
+
+button{
+    border:none;
+    border-radius:8px;
+    padding:10px 16px;
+    font-size:15px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+#logoutBtn{
+    background:#ff5f5f;
+    color:white;
+}
+
+main{
+    padding:24px;
+}
+
+.card{
+    background:#1d1d1d;
+    border-radius:14px;
+    padding:22px;
+    max-width:700px;
+    margin:0 auto;
+}
+
+#loading{
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:18px;
+}
+
+#dashboardContent{
+    display:none;
+}
+</style>
 </head>
+
 <body>
-    Dashboard
+
+<div id="loading">
+    Verifica accesso...
+</div>
+
+<div id="dashboardContent">
+
+    <header>
+        <h1>Territorio Live</h1>
+
+        <button id="logoutBtn">
+            Esci
+        </button>
+    </header>
+
+    <main>
+        <div class="card">
+            <h2>Dashboard Gestore</h2>
+            <p>Accesso effettuato correttamente.</p>
+            <p id="adminEmail"></p>
+        </div>
+    </main>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+
+import {
+    getAuth,
+    onAuthStateChanged,
+    signOut
+} from
+"https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAhAJOjQSXmzvo2QnuhB4EIDTK88DCHgm0",
+    authDomain: "territorio-live.firebaseapp.com",
+    projectId: "territorio-live",
+    storageBucket: "territorio-live.firebasestorage.app",
+    messagingSenderId: "1014933311241",
+    appId: "1:1014933311241:web:21cd7b52882677ede58dd8",
+    measurementId: "G-96WJ75QWLW"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+const loading = document.getElementById("loading");
+const dashboardContent =
+    document.getElementById("dashboardContent");
+const adminEmail =
+    document.getElementById("adminEmail");
+const logoutBtn =
+    document.getElementById("logoutBtn");
+
+onAuthStateChanged(auth, user => {
+
+    if(!user){
+        window.location.replace("./index.html");
+        return;
+    }
+
+    adminEmail.textContent =
+        "Account: " + user.email;
+
+    loading.style.display = "none";
+    dashboardContent.style.display = "block";
+});
+
+logoutBtn.addEventListener("click", async () => {
+
+    try{
+        await signOut(auth);
+        window.location.replace("./index.html");
+    }catch(error){
+        console.error("Errore logout:", error);
+        alert("Logout non riuscito.");
+    }
+});
+
+</script>
+
 </body>
 </html>
