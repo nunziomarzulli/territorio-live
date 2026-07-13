@@ -1,201 +1,207 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Territorio Live - Login Admin</title>
+    <title>Territorio Live - Login Admin</title>
 
-<style>
-body{
-    margin:0;
-    font-family:Arial,Helvetica,sans-serif;
-    background:#111;
-    color:white;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    min-height:100vh;
-}
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-.box{
-    width:340px;
-    background:#1d1d1d;
-    border-radius:16px;
-    padding:30px;
-    box-sizing:border-box;
-    box-shadow:0 0 20px rgba(0,0,0,.4);
-}
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: #111;
+            color: #fff;
+            font-family: Arial, Helvetica, sans-serif;
+        }
 
-h1{
-    text-align:center;
-    margin-top:0;
-    color:#39d353;
-}
+        .box {
+            width: 100%;
+            max-width: 340px;
+            padding: 30px;
+            border-radius: 16px;
+            background: #1d1d1d;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.45);
+        }
 
-.subtitle{
-    text-align:center;
-    color:#bcbcbc;
-    margin-bottom:20px;
-}
+        h1 {
+            margin: 0;
+            color: #39d353;
+            text-align: center;
+        }
 
-input{
-    width:100%;
-    padding:12px;
-    margin-top:12px;
-    border:1px solid #444;
-    border-radius:8px;
-    box-sizing:border-box;
-    font-size:16px;
-}
+        .subtitle {
+            margin: 22px 0 20px;
+            color: #bcbcbc;
+            text-align: center;
+        }
 
-button{
-    width:100%;
-    margin-top:18px;
-    padding:12px;
-    border:none;
-    border-radius:8px;
-    background:#39d353;
-    color:#111;
-    font-size:16px;
-    font-weight:bold;
-    cursor:pointer;
-}
+        input {
+            width: 100%;
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: #fff;
+            color: #111;
+            font-size: 16px;
+        }
 
-button:disabled{
-    opacity:.6;
-    cursor:not-allowed;
-}
+        button {
+            width: 100%;
+            margin-top: 18px;
+            padding: 12px;
+            border: 0;
+            border-radius: 8px;
+            background: #39d353;
+            color: #111;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
 
-#error{
-    color:#ff7070;
-    text-align:center;
-    margin-top:15px;
-    min-height:20px;
-}
-</style>
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        #error {
+            min-height: 20px;
+            margin-top: 15px;
+            color: #ff7070;
+            text-align: center;
+        }
+    </style>
 </head>
 
 <body>
 
-<div class="box">
+    <div class="box">
+        <h1>Territorio Live</h1>
 
-    <h1>Territorio Live</h1>
+        <div class="subtitle">Accesso gestore</div>
 
-    <div class="subtitle">
-        Accesso gestore
+        <form id="loginForm">
+            <input
+                id="email"
+                type="email"
+                placeholder="Email"
+                autocomplete="username"
+                required
+            >
+
+            <input
+                id="password"
+                type="password"
+                placeholder="Password"
+                autocomplete="current-password"
+                required
+            >
+
+            <button id="loginBtn" type="submit">
+                Accedi
+            </button>
+        </form>
+
+        <div id="error"></div>
     </div>
 
-    <form id="loginForm">
+    <script type="module">
+        import { initializeApp } from
+        "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 
-        <input
-            id="email"
-            type="email"
-            placeholder="Email"
-            autocomplete="username"
-            required
-        >
+        import {
+            getAuth,
+            onAuthStateChanged,
+            signInWithEmailAndPassword
+        } from
+        "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
-        <input
-            id="password"
-            type="password"
-            placeholder="Password"
-            autocomplete="current-password"
-            required
-        >
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhAJOjQSXmzvo2Qnuhb4EIDTK88DCHgm0",
+            authDomain: "territorio-live.firebaseapp.com",
+            projectId: "territorio-live",
+            storageBucket: "territorio-live.firebasestorage.app",
+            messagingSenderId: "1014933311241",
+            appId: "1:1014933311241:web:21cd7b52882677ede58dd8",
+            measurementId: "G-96WJ75QWLW"
+        };
 
-        <button id="loginBtn" type="submit">
-            Accedi
-        </button>
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
 
-    </form>
+        const loginForm = document.getElementById("loginForm");
+        const emailInput = document.getElementById("email");
+        const passwordInput = document.getElementById("password");
+        const loginBtn = document.getElementById("loginBtn");
+        const errorBox = document.getElementById("error");
 
-    <div id="error"></div>
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.replace("./dashboard.html");
+            }
+        });
 
-</div>
+        loginForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
 
-<script type="module">
+            errorBox.textContent = "";
+            loginBtn.disabled = true;
+            loginBtn.textContent = "Accesso in corso...";
 
-import { initializeApp } from
-"https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+            try {
+                await signInWithEmailAndPassword(
+                    auth,
+                    emailInput.value.trim(),
+                    passwordInput.value
+                );
 
-import {
-    getAuth,
-    signInWithEmailAndPassword,
-    onAuthStateChanged
-} from
-"https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+                window.location.replace("./dashboard.html");
 
-const firebaseConfig = {
-    apiKey: "AIzaSyAhAJOjQSXmzvo2Qnuhb4EIDTK88DCHgm0",
-    authDomain: "territorio-live.firebaseapp.com",
-    projectId: "territorio-live",
-    storageBucket: "territorio-live.firebasestorage.app",
-    messagingSenderId: "1014933311241",
-    appId: "1:1014933311241:web:21cd7b52882677ede58dd8",
-    measurementId: "G-96WJ75QWLW"
-};
+            } catch (error) {
+                console.error("Errore Firebase:", error.code, error.message);
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+                switch (error.code) {
+                    case "auth/invalid-credential":
+                    case "auth/user-not-found":
+                    case "auth/wrong-password":
+                        errorBox.textContent =
+                            "Email o password non corretti.";
+                        break;
 
-const loginForm = document.getElementById("loginForm");
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-const loginBtn = document.getElementById("loginBtn");
-const errorBox = document.getElementById("error");
+                    case "auth/too-many-requests":
+                        errorBox.textContent =
+                            "Troppi tentativi. Riprova più tardi.";
+                        break;
 
-onAuthStateChanged(auth, user => {
-    if(user){
-        window.location.replace("./dashboard.html");
-    }
-});
+                    case "auth/unauthorized-domain":
+                        errorBox.textContent =
+                            "Dominio non autorizzato in Firebase.";
+                        break;
 
-loginForm.addEventListener("submit", async event => {
+                    case "auth/api-key-not-valid.-please-pass-a-valid-api-key.":
+                        errorBox.textContent =
+                            "Chiave Firebase non valida.";
+                        break;
 
-    event.preventDefault();
+                    default:
+                        errorBox.textContent =
+                            "Accesso non riuscito. Controlla la Console.";
+                }
 
-    errorBox.textContent = "";
-    loginBtn.disabled = true;
-    loginBtn.textContent = "Accesso in corso...";
-
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-
-    try{
-
-        await signInWithEmailAndPassword(
-            auth,
-            email,
-            password
-        );
-
-        window.location.replace("./dashboard.html");
-
-    }catch(error){
-
-        console.error(error);
-
-        if(
-            error.code === "auth/invalid-credential" ||
-            error.code === "auth/user-not-found" ||
-            error.code === "auth/wrong-password"
-        ){
-            errorBox.textContent = "Email o password non corretti.";
-        }else if(error.code === "auth/too-many-requests"){
-            errorBox.textContent =
-                "Troppi tentativi. Riprova più tardi.";
-        }else{
-            errorBox.textContent =
-                "Accesso non riuscito. Riprova.";
-        }
-
-        loginBtn.disabled = false;
-        loginBtn.textContent = "Accedi";
-    }
-});
-
-</script>
+                loginBtn.disabled = false;
+                loginBtn.textContent = "Accedi";
+            }
+        });
+    </script>
 
 </body>
 </html>
