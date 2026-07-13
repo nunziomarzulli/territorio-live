@@ -190,6 +190,41 @@ main{
     text-align:center;
 }
 
+.report-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:16px;
+}
+
+.action-approve{
+    background:#2e7d32;
+    color:white;
+}
+
+.action-delete{
+    background:#c62828;
+    color:white;
+}
+
+.action-map{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:8px;
+    padding:10px 16px;
+    font-size:15px;
+    font-weight:bold;
+    text-decoration:none;
+    background:#1565c0;
+    color:white;
+}
+
+.report-actions button:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+}
+
 @media(max-width:700px){
 
     header{
@@ -281,7 +316,11 @@ import {
     getDocs,
     query,
     orderBy,
-    limit
+    limit,
+    doc,
+    updateDoc,
+    deleteDoc,
+    serverTimestamp
 } from
 "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
@@ -489,6 +528,37 @@ function createReportCard(docSnapshot){
                     ${escapeHtml(docSnapshot.id)}
                 </div>
 
+                <div class="report-actions">
+                    <button
+                        type="button"
+                        class="action-approve"
+                        data-action="approve"
+                        data-id="${escapeHtml(docSnapshot.id)}">
+                        Approva
+                    </button>
+
+                    <button
+                        type="button"
+                        class="action-delete"
+                        data-action="delete"
+                        data-id="${escapeHtml(docSnapshot.id)}">
+                        Elimina
+                    </button>
+
+                    ${Number.isFinite(Number(report.lat)) && Number.isFinite(Number(report.lng))
+                        ? `<a
+                            class="action-map"
+                            href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(report.lat + "," + report.lng)}"
+                            target="_blank"
+                            rel="noopener noreferrer">
+                            Apri sulla mappa
+                           </a>`
+                        : `<button type="button" class="action-map" disabled>
+                            Posizione non disponibile
+                           </button>`
+                    }
+                </div>
+
             </div>
 
         </article>
@@ -564,6 +634,90 @@ async function caricaSegnalazioni(){
         `;
     }
 }
+
+reportsList.addEventListener("click", async event => {
+
+    const button = event.target.closest("button[data-action]");
+
+    if(!button){
+        return;
+    }
+
+    const reportId = button.dataset.id;
+    const action = button.dataset.action;
+
+    if(!reportId){
+        return;
+    }
+
+    if(action === "approve"){
+
+        const conferma = confirm(
+            "Vuoi approvare questa segnalazione e rimuoverla dalla coda di moderazione?"
+        );
+
+        if(!conferma){
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "Approvazione...";
+
+        try{
+
+            await updateDoc(
+                doc(db,"segnalazioni",reportId),
+                {
+                    moderazioneStato:"approvata",
+                    moderazioneMotivo:"",
+                    moderazioneAggiornataAt:serverTimestamp(),
+                    moderazioneAggiornataDa:auth.currentUser?.uid || ""
+                }
+            );
+
+            await caricaSegnalazioni();
+
+        }catch(error){
+
+            console.error("Errore approvazione:",error);
+            button.disabled = false;
+            button.textContent = "Approva";
+            alert("Approvazione non riuscita.");
+        }
+
+        return;
+    }
+
+    if(action === "delete"){
+
+        const conferma = confirm(
+            "Vuoi eliminare definitivamente questa segnalazione? L'operazione non può essere annullata."
+        );
+
+        if(!conferma){
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "Eliminazione...";
+
+        try{
+
+            await deleteDoc(
+                doc(db,"segnalazioni",reportId)
+            );
+
+            await caricaSegnalazioni();
+
+        }catch(error){
+
+            console.error("Errore eliminazione:",error);
+            button.disabled = false;
+            button.textContent = "Elimina";
+            alert("Eliminazione non riuscita.");
+        }
+    }
+});
 
 onAuthStateChanged(auth,user => {
 
