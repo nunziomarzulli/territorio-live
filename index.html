@@ -1699,7 +1699,11 @@ async function loadReportsFromFirestore(){
   let resolvedCount = 0;
 
   try {
-    const currentUid = await getCurrentUid();
+    // La lettura della mappa è pubblica e non deve bloccarsi
+    // se l'autenticazione anonima impiega qualche secondo o fallisce.
+    const authenticatedUser = await authenticationReady;
+    const currentUid = authenticatedUser ? authenticatedUser.uid : null;
+
     const q = query(collection(db, "segnalazioni"), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
 
@@ -1836,7 +1840,15 @@ ${currentMunicipalityFilter !== "Tutti"
 
   } catch (error) {
     console.error("Errore caricamento mappa:", error);
-    alert("Errore nel caricamento delle segnalazioni.");
+
+    const errorCode = error && error.code ? error.code : "";
+    const errorMessage = error && error.message ? error.message : "Errore sconosciuto";
+
+    alert(
+      "Errore nel caricamento delle segnalazioni." +
+      (errorCode ? "\n\nCodice: " + errorCode : "") +
+      "\n\nDettaglio: " + errorMessage
+    );
   }
 }
 
