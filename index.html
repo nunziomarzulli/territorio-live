@@ -295,19 +295,24 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 #sendBtn,#backToMapBtn{width:100%;margin-top:12px}
 #loadingText{font-size:22px}
 #exploreScreen{padding:0;flex-direction:column}
-#exploreTopBar{width:100%;height:74px;background:white;display:flex;align-items:center;justify-content:space-between;padding:0 10px;box-sizing:border-box;border-bottom:1px solid #ddd;z-index:999;gap:8px}
+#exploreTopBar{width:100%;height:112px;background:white;display:flex;align-items:center;justify-content:space-between;padding:6px 10px;box-sizing:border-box;border-bottom:1px solid #ddd;z-index:999;gap:8px}
 #exploreTitleBox{display:flex;flex-direction:column;align-items:center;font-size:13px;line-height:1.35}
 
+#municipalityFilter,
 #categoryFilter{
-  max-width:175px;
-  min-width:120px;
+  width:175px;
+  max-width:48vw;
   border:1px solid #ccc;
   border-radius:10px;
-  padding:9px 8px;
+  padding:8px 7px;
   background:white;
-  font-size:14px;
+  font-size:13px;
   font-weight:bold;
   color:#222;
+}
+
+#municipalityFilter{
+  margin-top:4px;
 }
 
 .category-map-marker{
@@ -337,7 +342,7 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
     font-weight:bold;
     line-height:1.6;
 }
-#exploreMap{width:100%;height:calc(100vh - 74px)}
+#exploreMap{width:100%;height:calc(100vh - 112px)}
 .popup-img{width:180px;max-height:140px;object-fit:cover;border-radius:10px;margin-top:8px}
 .popup-box{text-align:left;font-size:14px}
 .popup-location{
@@ -465,6 +470,11 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 
  <div id="exploreTitleBox">
     <strong>Mappa segnalazioni</strong>
+
+    <select id="municipalityFilter" aria-label="Filtra per Comune">
+      <option value="Tutti">Tutti i Comuni</option>
+    </select>
+
     <select id="categoryFilter" aria-label="Filtra per categoria">
       <option value="Tutte">Tutte</option>
       <option value="Buca stradale">🕳️ Buche</option>
@@ -690,6 +700,7 @@ const backToMapBtn = document.getElementById("backToMapBtn");
 const backHomeBtn = document.getElementById("backHomeBtn");
 const newReportBtn = document.getElementById("newReportBtn");
 const statsBox = document.getElementById("statsBox");
+const municipalityFilter = document.getElementById("municipalityFilter");
 const categoryFilter = document.getElementById("categoryFilter");
 const myReportsBtn = document.getElementById("myReportsBtn");
 const myReportsScreen = document.getElementById("myReportsScreen");
@@ -723,6 +734,7 @@ let currentLat = null;
 let currentLng = null;
 let reportToResolveId = null;
 let reportsCache = {};
+let currentMunicipalityFilter = "Tutti";
 let currentCategoryFilter = "Tutte";
 const MAX_RESOLVE_DISTANCE_METERS = 30;
   
@@ -1317,7 +1329,9 @@ sendBtn.onclick = async () => {
 };
 
 openMapBtn.onclick = () => {
+  currentMunicipalityFilter = "Tutti";
   currentCategoryFilter = "Tutte";
+  municipalityFilter.value = "Tutti";
   categoryFilter.value = "Tutte";
   showScreen(exploreScreen);
 
@@ -1450,6 +1464,32 @@ function createOpenIcon(category){
   });
 }
 
+function populateMunicipalityFilter(reports){
+  const municipalities = [...new Set(
+    reports
+      .map(report => String(report.comune || "").trim())
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, "it"));
+
+  const previousValue = currentMunicipalityFilter;
+
+  municipalityFilter.innerHTML =
+    '<option value="Tutti">Tutti i Comuni</option>' +
+    municipalities
+      .map(comune => {
+        const safeComune = escapeHtml(comune);
+        return `<option value="${safeComune}">${safeComune}</option>`;
+      })
+      .join("");
+
+  const stillExists =
+    previousValue === "Tutti" ||
+    municipalities.includes(previousValue);
+
+  currentMunicipalityFilter = stillExists ? previousValue : "Tutti";
+  municipalityFilter.value = currentMunicipalityFilter;
+}
+
 async function loadReportsFromFirestore(){
   if (!exploreMap) return;
 
@@ -1467,12 +1507,17 @@ async function loadReportsFromFirestore(){
     const q = query(collection(db, "segnalazioni"), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
 
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
+    const reports = snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    }));
 
+    populateMunicipalityFilter(reports);
+
+    reports.forEach(data => {
       if (!data.lat || !data.lng) return;
 
-      const reportId = docSnap.id;
+      const reportId = data.id;
       reportsCache[reportId] = {
     lat: data.lat,
     lng: data.lng
@@ -1480,6 +1525,13 @@ async function loadReportsFromFirestore(){
       const status = data.stato || "aperta";
       const isResolved = status === "risolta";
       const category = data.categoria || "Segnalazione";
+
+      if (
+        currentMunicipalityFilter !== "Tutti" &&
+        String(data.comune || "").trim() !== currentMunicipalityFilter
+      ) {
+        return;
+      }
 
       if (currentCategoryFilter !== "Tutte" && category !== currentCategoryFilter) {
         return;
@@ -1577,6 +1629,10 @@ ${data.ownerId === ownerId
     });
 
     statsBox.innerHTML = `
+${currentMunicipalityFilter !== "Tutti"
+  ? `<strong>${escapeHtml(currentMunicipalityFilter)}</strong><br>`
+  : ""
+}
 🔴 Attive: <strong>${openCount}</strong><br>
 ⭐ Risolte: <strong>${resolvedCount}</strong>
 `;
@@ -1797,6 +1853,11 @@ window.confirmReport = async function(reportId){
     console.error(error);
     alert("Errore durante la conferma.");
   }
+};
+
+municipalityFilter.onchange = async () => {
+  currentMunicipalityFilter = municipalityFilter.value;
+  await loadReportsFromFirestore();
 };
 
 categoryFilter.onchange = async () => {
