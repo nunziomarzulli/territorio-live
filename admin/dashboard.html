@@ -7,6 +7,10 @@
 <title>Dashboard Gestore - Territorio Live</title>
 
 <style>
+*{
+    box-sizing:border-box;
+}
+
 body{
     margin:0;
     font-family:Arial,Helvetica,sans-serif;
@@ -18,6 +22,7 @@ header{
     display:flex;
     justify-content:space-between;
     align-items:center;
+    gap:15px;
     padding:18px 24px;
     background:#1d1d1d;
     border-bottom:1px solid #333;
@@ -47,12 +52,26 @@ main{
     padding:24px;
 }
 
-.card{
+.dashboard-card{
     background:#1d1d1d;
     border-radius:14px;
     padding:22px;
-    max-width:700px;
+    max-width:1000px;
     margin:0 auto;
+}
+
+.dashboard-header{
+    margin-bottom:24px;
+}
+
+.dashboard-header h2{
+    margin-top:0;
+}
+
+.divider{
+    border:0;
+    border-top:1px solid #333;
+    margin:22px 0;
 }
 
 #loading{
@@ -65,6 +84,123 @@ main{
 
 #dashboardContent{
     display:none;
+}
+
+#reportsLoading{
+    color:#bbb;
+    margin-bottom:16px;
+}
+
+.report-card{
+    display:grid;
+    grid-template-columns:180px 1fr;
+    gap:18px;
+    background:#2a2a2a;
+    border-radius:12px;
+    padding:16px;
+    margin-bottom:16px;
+}
+
+.report-image{
+    width:180px;
+    height:140px;
+    object-fit:cover;
+    border-radius:10px;
+    background:#181818;
+}
+
+.report-image-placeholder{
+    width:180px;
+    height:140px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:10px;
+    background:#181818;
+    color:#888;
+    text-align:center;
+    padding:10px;
+}
+
+.report-content{
+    min-width:0;
+}
+
+.report-category{
+    margin:0 0 12px;
+    color:#39d353;
+    font-size:19px;
+}
+
+.report-row{
+    margin:7px 0;
+    line-height:1.4;
+    word-break:break-word;
+}
+
+.report-label{
+    color:#aaa;
+    font-weight:bold;
+}
+
+.status-badge{
+    display:inline-block;
+    padding:5px 9px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:bold;
+    text-transform:capitalize;
+}
+
+.status-open{
+    background:#5a4412;
+    color:#ffd66b;
+}
+
+.status-resolved{
+    background:#174f2a;
+    color:#75e897;
+}
+
+.status-other{
+    background:#444;
+    color:#ddd;
+}
+
+.error-message{
+    padding:14px;
+    border-radius:10px;
+    background:#4a1f1f;
+    color:#ff9b9b;
+}
+
+@media(max-width:700px){
+
+    header{
+        padding:15px;
+    }
+
+    h1{
+        font-size:20px;
+    }
+
+    main{
+        padding:14px;
+    }
+
+    .dashboard-card{
+        padding:16px;
+    }
+
+    .report-card{
+        grid-template-columns:1fr;
+    }
+
+    .report-image,
+    .report-image-placeholder{
+        width:100%;
+        height:210px;
+    }
 }
 </style>
 </head>
@@ -80,26 +216,30 @@ main{
     <header>
         <h1>Territorio Live</h1>
 
-        <button id="logoutBtn">
+        <button id="logoutBtn" type="button">
             Esci
         </button>
     </header>
 
     <main>
-        <div class="card">
-          <h2>Dashboard Gestore</h2>
-<p>Accesso effettuato correttamente.</p>
-<p id="adminEmail"></p>
+        <div class="dashboard-card">
 
-<hr style="border:0;border-top:1px solid #333;margin:22px 0;">
+            <div class="dashboard-header">
+                <h2>Dashboard Gestore</h2>
+                <p>Accesso effettuato correttamente.</p>
+                <p id="adminEmail"></p>
+            </div>
 
-<h3>Ultime segnalazioni</h3>
+            <hr class="divider">
 
-<div id="reportsLoading">
-    Caricamento segnalazioni...
-</div>
+            <h3>Ultime segnalazioni</h3>
 
-<div id="reportsList"></div>
+            <div id="reportsLoading">
+                Caricamento segnalazioni...
+            </div>
+
+            <div id="reportsList"></div>
+
         </div>
     </main>
 
@@ -107,7 +247,9 @@ main{
 
 <script type="module">
 
-import { initializeApp } from
+import {
+    initializeApp
+} from
 "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 
 import {
@@ -116,7 +258,7 @@ import {
     signOut
 } from
 "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-    
+
 import {
     getFirestore,
     collection,
@@ -126,7 +268,7 @@ import {
     limit
 } from
 "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-    
+
 const firebaseConfig = {
     apiKey: "AIzaSyAhAJOjQSXmzvo2QnuHb4EIDTK88DCHgm0",
     authDomain: "territorio-live.firebaseapp.com",
@@ -140,49 +282,210 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-    
-const loading = document.getElementById("loading");
+
+const loading =
+    document.getElementById("loading");
+
 const dashboardContent =
     document.getElementById("dashboardContent");
+
 const adminEmail =
     document.getElementById("adminEmail");
+
 const logoutBtn =
     document.getElementById("logoutBtn");
-    const reportsLoading =
+
+const reportsLoading =
     document.getElementById("reportsLoading");
 
 const reportsList =
     document.getElementById("reportsList");
 
-onAuthStateChanged(auth, user => {
+function escapeHtml(value){
 
-    if(!user){
-        window.location.replace("./index.html");
-        return;
+    return String(value ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+}
+
+function formatDate(timestamp){
+
+    if(!timestamp){
+        return "-";
     }
 
-    adminEmail.textContent =
-        "Account: " + user.email;
+    try{
 
-    loading.style.display = "none";
-    dashboardContent.style.display = "block";
-    caricaSegnalazioni();
-});
- 
+        const date =
+            typeof timestamp.toDate === "function"
+                ? timestamp.toDate()
+                : new Date(timestamp);
+
+        if(Number.isNaN(date.getTime())){
+            return "-";
+        }
+
+        return date.toLocaleString("it-IT",{
+            day:"2-digit",
+            month:"2-digit",
+            year:"numeric",
+            hour:"2-digit",
+            minute:"2-digit"
+        });
+
+    }catch(error){
+
+        console.error("Errore data:",error);
+        return "-";
+    }
+}
+
+function getStatusClass(status){
+
+    const normalized =
+        String(status || "").toLowerCase();
+
+    if(
+        normalized === "aperta" ||
+        normalized === "attiva"
+    ){
+        return "status-open";
+    }
+
+    if(
+        normalized === "risolta" ||
+        normalized === "risolto"
+    ){
+        return "status-resolved";
+    }
+
+    return "status-other";
+}
+
+function createReportCard(docSnapshot){
+
+    const report = docSnapshot.data();
+
+    const categoria =
+        escapeHtml(report.categoria || "Categoria non indicata");
+
+    const comune =
+        escapeHtml(report.comune || "-");
+
+    const provincia =
+        escapeHtml(report.provincia || "-");
+
+    const regione =
+        escapeHtml(report.regione || "-");
+
+    const indirizzo =
+        escapeHtml(report.indirizzo || "-");
+
+    const stato =
+        escapeHtml(report.stato || "-");
+
+    const conferme =
+        Number(report.conferme || 0);
+
+    const data =
+        formatDate(report.createdAt);
+
+    const immagine =
+        typeof report.immagineBase64 === "string"
+            ? report.immagineBase64.trim()
+            : "";
+
+    const imageHtml = immagine
+        ? `
+            <img
+                class="report-image"
+                src="${immagine}"
+                alt="Foto della segnalazione"
+            >
+        `
+        : `
+            <div class="report-image-placeholder">
+                Foto non disponibile
+            </div>
+        `;
+
+    return `
+        <article class="report-card">
+
+            <div>
+                ${imageHtml}
+            </div>
+
+            <div class="report-content">
+
+                <h4 class="report-category">
+                    ${categoria}
+                </h4>
+
+                <div class="report-row">
+                    <span class="report-label">Comune:</span>
+                    ${comune} (${provincia})
+                </div>
+
+                <div class="report-row">
+                    <span class="report-label">Regione:</span>
+                    ${regione}
+                </div>
+
+                <div class="report-row">
+                    <span class="report-label">Indirizzo:</span>
+                    ${indirizzo}
+                </div>
+
+                <div class="report-row">
+                    <span class="report-label">Data:</span>
+                    ${data}
+                </div>
+
+                <div class="report-row">
+                    <span class="report-label">Stato:</span>
+                    <span class="status-badge ${getStatusClass(report.stato)}">
+                        ${stato}
+                    </span>
+                </div>
+
+                <div class="report-row">
+                    <span class="report-label">Conferme:</span>
+                    ${conferme}
+                </div>
+
+                <div class="report-row">
+                    <span class="report-label">ID:</span>
+                    ${escapeHtml(docSnapshot.id)}
+                </div>
+
+            </div>
+
+        </article>
+    `;
+}
+
 async function caricaSegnalazioni(){
 
     reportsLoading.style.display = "block";
+    reportsLoading.textContent =
+        "Caricamento segnalazioni...";
+
     reportsList.innerHTML = "";
 
     try{
 
-        const q = query(
+        const reportsQuery = query(
             collection(db,"segnalazioni"),
             orderBy("createdAt","desc"),
             limit(20)
         );
 
-        const snapshot = await getDocs(q);
+        const snapshot =
+            await getDocs(reportsQuery);
 
         reportsLoading.style.display = "none";
 
@@ -194,43 +497,72 @@ async function caricaSegnalazioni(){
             return;
         }
 
-        snapshot.forEach(doc=>{
+        const cards = [];
 
-            const s = doc.data();
-
-            reportsList.innerHTML += `
-                <div style="
-                    background:#2a2a2a;
-                    border-radius:10px;
-                    padding:15px;
-                    margin-bottom:15px;
-                ">
-                    <b>${s.categoria}</b><br>
-                    ${s.comune || "-"} (${s.provincia || "-"})<br>
-                    Stato: ${s.stato}<br>
-                    Conferme: ${s.conferme || 0}
-                </div>
-            `;
-
+        snapshot.forEach(docSnapshot => {
+            cards.push(
+                createReportCard(docSnapshot)
+            );
         });
 
-    }catch(err){
+        reportsList.innerHTML =
+            cards.join("");
 
-        console.error(err);
+    }catch(error){
 
-        reportsLoading.innerHTML =
-            "Errore nel caricamento.";
+        console.error(
+            "Errore caricamento segnalazioni:",
+            error
+        );
 
+        reportsLoading.style.display = "none";
+
+        reportsList.innerHTML = `
+            <div class="error-message">
+                Errore nel caricamento delle segnalazioni.
+            </div>
+        `;
+    }
+}
+
+onAuthStateChanged(auth,user => {
+
+    if(!user){
+
+        window.location.replace("./index.html");
+        return;
     }
 
-}
-logoutBtn.addEventListener("click", async () => {
+    adminEmail.textContent =
+        "Account: " + (user.email || "Amministratore");
+
+    loading.style.display = "none";
+    dashboardContent.style.display = "block";
+
+    caricaSegnalazioni();
+});
+
+logoutBtn.addEventListener("click",async () => {
+
+    logoutBtn.disabled = true;
+    logoutBtn.textContent = "Uscita...";
 
     try{
+
         await signOut(auth);
+
         window.location.replace("./index.html");
+
     }catch(error){
-        console.error("Errore logout:", error);
+
+        console.error(
+            "Errore logout:",
+            error
+        );
+
+        logoutBtn.disabled = false;
+        logoutBtn.textContent = "Esci";
+
         alert("Logout non riuscito.");
     }
 });
