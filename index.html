@@ -340,6 +340,21 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 #exploreMap{width:100%;height:calc(100vh - 74px)}
 .popup-img{width:180px;max-height:140px;object-fit:cover;border-radius:10px;margin-top:8px}
 .popup-box{text-align:left;font-size:14px}
+.popup-location{
+  margin:8px 0 10px;
+  padding:8px 10px;
+  background:#f3f7fb;
+  border-radius:9px;
+  line-height:1.4;
+}
+.popup-location a{
+  color:#1565c0;
+  font-weight:bold;
+  text-decoration:none;
+}
+.popup-location a:hover{
+  text-decoration:underline;
+}
 .resolved-label{display:inline-block;background:#f9a825;color:#111;padding:4px 7px;border-radius:8px;font-weight:bold;margin-top:4px}
 .open-label{display:inline-block;background:#c62828;color:white;padding:4px 7px;border-radius:8px;font-weight:bold;margin-top:4px}
 </style>
@@ -1171,6 +1186,83 @@ backToMapBtn.onclick = () => {
   }, 200);
 };
 
+async function reverseGeocode(lat, lng){
+  try {
+    const url =
+      "https://nominatim.openstreetmap.org/reverse" +
+      "?format=jsonv2" +
+      "&lat=" + encodeURIComponent(lat) +
+      "&lon=" + encodeURIComponent(lng) +
+      "&zoom=18" +
+      "&addressdetails=1" +
+      "&accept-language=it";
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      },
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error("Errore Nominatim: " + response.status);
+    }
+
+    const data = await response.json();
+    const address = data.address || {};
+
+    const strada =
+      address.road ||
+      address.pedestrian ||
+      address.residential ||
+      address.footway ||
+      address.path ||
+      address.cycleway ||
+      "";
+
+    const civico = address.house_number || "";
+
+    const comune =
+      address.city ||
+      address.town ||
+      address.village ||
+      address.municipality ||
+      address.hamlet ||
+      "";
+
+    const provincia =
+      address.province ||
+      address.county ||
+      address.state_district ||
+      "";
+
+    const regione = address.state || "";
+
+    const indirizzoBreve = [strada, civico]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    return {
+      indirizzo: indirizzoBreve || data.display_name || "",
+      comune,
+      provincia,
+      regione
+    };
+
+  } catch (error) {
+    console.error("Errore geocodifica inversa:", error);
+
+    return {
+      indirizzo: "",
+      comune: "",
+      provincia: "",
+      regione: ""
+    };
+  }
+}
+
 sendBtn.onclick = async () => {
   if (!selectedCategory) {
     alert("Scegli una categoria.");
@@ -1188,9 +1280,13 @@ sendBtn.onclick = async () => {
   }
 
   sendBtn.disabled = true;
-  sendBtn.textContent = "Invio in corso...";
+  sendBtn.textContent = "Rilevamento indirizzo...";
 
   try {
+    const locationData = await reverseGeocode(currentLat, currentLng);
+
+    sendBtn.textContent = "Invio in corso...";
+
     await addDoc(collection(db, "segnalazioni"), {
       categoria: selectedCategory,
       lat: currentLat,
@@ -1200,6 +1296,10 @@ sendBtn.onclick = async () => {
       conferme: 0,
       confirmedBy: [],
       ownerId: ownerId,
+      indirizzo: locationData.indirizzo,
+      comune: locationData.comune,
+      provincia: locationData.provincia,
+      regione: locationData.regione,
       createdAt: serverTimestamp()
     });
 
@@ -1403,6 +1503,33 @@ async function loadReportsFromFirestore(){
         <div class="popup-box">
           <strong>${escapeHtml(data.categoria || "Segnalazione")}</strong><br>
 
+          <div class="popup-location">
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.lat + "," + data.lng)}"
+              target="_blank"
+              rel="noopener noreferrer">
+              📍 ${data.indirizzo
+                ? escapeHtml(data.indirizzo)
+                : "Apri posizione in Google Maps"
+              }
+            </a>
+
+            ${data.comune
+              ? `<br><strong>Comune:</strong> ${escapeHtml(data.comune)}`
+              : ""
+            }
+
+            ${data.provincia
+              ? `<br><strong>Provincia:</strong> ${escapeHtml(data.provincia)}`
+              : ""
+            }
+
+            ${data.regione
+              ? `<br><strong>Regione:</strong> ${escapeHtml(data.regione)}`
+              : ""
+            }
+          </div>
+
           ${isResolved
             ? `<span class="resolved-label">⭐ Risolta</span><br>`
             : `<span class="open-label">📍 Aperta</span><br>`
@@ -1517,6 +1644,33 @@ async function loadMyReports(){
               : ""
             }
           </p>
+
+          <div class="popup-location">
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(report.lat + "," + report.lng)}"
+              target="_blank"
+              rel="noopener noreferrer">
+              📍 ${report.indirizzo
+                ? escapeHtml(report.indirizzo)
+                : "Apri posizione in Google Maps"
+              }
+            </a>
+
+            ${report.comune
+              ? `<br><strong>Comune:</strong> ${escapeHtml(report.comune)}`
+              : ""
+            }
+
+            ${report.provincia
+              ? `<br><strong>Provincia:</strong> ${escapeHtml(report.provincia)}`
+              : ""
+            }
+
+            ${report.regione
+              ? `<br><strong>Regione:</strong> ${escapeHtml(report.regione)}`
+              : ""
+            }
+          </div>
 
           ${report.immagineBase64
             ? `<img src="${report.immagineBase64}" alt="Foto segnalazione">`
