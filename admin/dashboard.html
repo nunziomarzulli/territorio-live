@@ -106,7 +106,17 @@ import {
     signOut
 } from
 "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-
+    
+import {
+    getFirestore,
+    collection,
+    getDocs,
+    query,
+    orderBy,
+    limit
+} from
+"https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+    
 const firebaseConfig = {
     apiKey: "AIzaSyAhAJOjQSXmzvo2QnuHb4EIDTK88DCHgm0",
     authDomain: "territorio-live.firebaseapp.com",
@@ -119,7 +129,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-
+const db = getFirestore(app);
+    
 const loading = document.getElementById("loading");
 const dashboardContent =
     document.getElementById("dashboardContent");
