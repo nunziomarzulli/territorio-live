@@ -1379,6 +1379,160 @@ backToMapBtn.onclick = () => {
   }, 200);
 };
 
+
+async function analyzePhotoForModeration(base64Image) {
+  const result = {
+    spamScore: 0,
+    moderazioneStato: "nessun_controllo",
+    moderazioneMotivo: "",
+    moderazioneControlli: {
+      luminositaMedia: null,
+      percentualePixelScuri: null,
+      immagineValida: true
+    }
+  };
+
+  try {
+    if (
+      typeof base64Image !== "string" ||
+      !base64Image.startsWith("data:image/")
+    ) {
+      result.spamScore = 100;
+      result.moderazioneStato = "da_controllare";
+      result.moderazioneMotivo = "Immagine non valida";
+      result.moderazioneControlli.immagineValida = false;
+      return result;
+    }
+
+    const img = new Image();
+
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = base64Image;
+    });
+
+    if (!img.naturalWidth || !img.naturalHeight) {
+      result.spamScore = 100;
+      result.moderazioneStato = "da_controllare";
+      result.moderazioneMotivo = "Immagine non valida";
+      result.moderazioneControlli.immagineValida = false;
+      return result;
+    }
+
+    const sampleCanvas = document.createElement("canvas");
+    const maxSampleSize = 160;
+    const scale = Math.min(
+      1,
+      maxSampleSize / img.naturalWidth,
+      maxSampleSize / img.naturalHeight
+    );
+
+    sampleCanvas.width = Math.max(
+      1,
+      Math.round(img.naturalWidth * scale)
+    );
+
+    sampleCanvas.height = Math.max(
+      1,
+      Math.round(img.naturalHeight * scale)
+    );
+
+    const ctx = sampleCanvas.getContext("2d", {
+      willReadFrequently: true
+    });
+
+    if (!ctx) {
+      throw new Error("Canvas non disponibile");
+    }
+
+    ctx.drawImage(
+      img,
+      0,
+      0,
+      sampleCanvas.width,
+      sampleCanvas.height
+    );
+
+    const pixels = ctx.getImageData(
+      0,
+      0,
+      sampleCanvas.width,
+      sampleCanvas.height
+    ).data;
+
+    let luminositaTotale = 0;
+    let pixelScuri = 0;
+    let pixelAnalizzati = 0;
+
+    for (let i = 0; i < pixels.length; i += 4) {
+      const alpha = pixels[i + 3];
+
+      if (alpha < 20) {
+        continue;
+      }
+
+      const red = pixels[i];
+      const green = pixels[i + 1];
+      const blue = pixels[i + 2];
+
+      const luminosita =
+        (0.2126 * red) +
+        (0.7152 * green) +
+        (0.0722 * blue);
+
+      luminositaTotale += luminosita;
+      pixelAnalizzati++;
+
+      if (luminosita < 28) {
+        pixelScuri++;
+      }
+    }
+
+    if (pixelAnalizzati === 0) {
+      result.spamScore = 100;
+      result.moderazioneStato = "da_controllare";
+      result.moderazioneMotivo = "Immagine non valida";
+      result.moderazioneControlli.immagineValida = false;
+      return result;
+    }
+
+    const luminositaMedia =
+      luminositaTotale / pixelAnalizzati;
+
+    const percentualePixelScuri =
+      pixelScuri / pixelAnalizzati;
+
+    result.moderazioneControlli.luminositaMedia =
+      Number(luminositaMedia.toFixed(2));
+
+    result.moderazioneControlli.percentualePixelScuri =
+      Number(percentualePixelScuri.toFixed(4));
+
+    const fotoQuasiNera =
+      luminositaMedia < 30 ||
+      percentualePixelScuri >= 0.92;
+
+    if (fotoQuasiNera) {
+      result.spamScore = 60;
+      result.moderazioneStato = "da_controllare";
+      result.moderazioneMotivo = "Foto troppo scura";
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error("Errore analisi moderazione foto:", error);
+
+    result.spamScore = 100;
+    result.moderazioneStato = "da_controllare";
+    result.moderazioneMotivo = "Immagine non valida";
+    result.moderazioneControlli.immagineValida = false;
+
+    return result;
+  }
+}
+
 async function reverseGeocode(lat, lng){
   try {
     const url =
@@ -1517,9 +1671,14 @@ sendBtn.onclick = async () => {
   }
 
   sendBtn.disabled = true;
-  sendBtn.textContent = "Rilevamento indirizzo...";
+  sendBtn.textContent = "Controllo qualità foto...";
 
   try {
+    const moderationResult =
+      await analyzePhotoForModeration(compressedPhoto);
+
+    sendBtn.textContent = "Rilevamento indirizzo...";
+
     const locationData = await reverseGeocode(currentLat, currentLng);
 
     sendBtn.textContent = "Controllo segnalazioni vicine...";
@@ -1577,7 +1736,11 @@ sendBtn.onclick = async () => {
             ultimaFotoRisoluzione: previousReport.resolvedImageBase64 || "",
             resolvedAt: null,
             resolvedImageBase64: "",
-            resolvedBy: ""
+            resolvedBy: "",
+            spamScore: moderationResult.spamScore,
+            moderazioneStato: moderationResult.moderazioneStato,
+            moderazioneMotivo: moderationResult.moderazioneMotivo,
+            moderazioneControlli: moderationResult.moderazioneControlli
           }
         );
 
@@ -1607,6 +1770,10 @@ sendBtn.onclick = async () => {
       regione: locationData.regione,
       ricorrenze: 0,
       risoluzioniTotali: 0,
+      spamScore: moderationResult.spamScore,
+      moderazioneStato: moderationResult.moderazioneStato,
+      moderazioneMotivo: moderationResult.moderazioneMotivo,
+      moderazioneControlli: moderationResult.moderazioneControlli,
       createdAt: serverTimestamp()
     });
 
