@@ -2,10 +2,763 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard Comune</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Comune di Adelfia - Territorio Live</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;font-family:Arial,Helvetica,sans-serif;background:#eef2f5;color:#17202a}
+body{overflow:hidden}
+button,input,select,textarea{font:inherit}
+
+#loading{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;background:#0f1720;color:#fff;font-size:17px}
+#app{display:none;width:100%;height:100%}
+
+header{height:76px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:11px 18px;background:#fff;border-bottom:1px solid #dce3e9}
+.identity{display:flex;align-items:center;gap:14px;min-width:0}
+.logo{font-size:22px;font-weight:800;white-space:nowrap}.logo span{color:#1f9d55}
+.municipality{min-width:0;padding-left:14px;border-left:1px solid #dce3e9}
+.municipality h1{margin:0;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.municipality p{margin:4px 0 0;color:#64717d;font-size:12px}
+.header-actions{display:flex;align-items:center;gap:10px}
+.user-label{text-align:right;font-size:12px;color:#64717d;max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.header-btn{border:0;border-radius:9px;padding:10px 13px;font-weight:bold;cursor:pointer}
+#refreshBtn{background:#198754;color:#fff}
+#logoutBtn{background:#c62828;color:#fff}
+
+main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:calc(100% - 76px)}
+#mapSection{position:relative;min-width:0;border-right:1px solid #d7dee5}
+#municipalityMap{width:100%;height:100%}
+
+.map-toolbar{position:absolute;left:15px;top:15px;z-index:1000;display:flex;gap:8px;flex-wrap:wrap;padding:9px;background:rgba(255,255,255,.96);border:1px solid #d8e0e7;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.map-toolbar select{padding:9px 10px;border:1px solid #ccd5dd;border-radius:8px;background:#fff}
+.map-stats{position:absolute;right:15px;top:15px;z-index:1000;padding:11px 13px;background:rgba(255,255,255,.96);border:1px solid #d8e0e7;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.12);font-size:13px;line-height:1.55}
+.legend{position:absolute;left:15px;bottom:15px;z-index:1000;padding:11px 13px;background:rgba(255,255,255,.96);border:1px solid #d8e0e7;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.12);font-size:12px;line-height:1.65}
+
+#sidePanel{display:flex;flex-direction:column;min-width:0;background:#fff}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid #dfe5ea}
+.tab{border:0;background:#fff;padding:15px 6px;font-size:12px;font-weight:bold;cursor:pointer;border-bottom:3px solid transparent}
+.tab.active{color:#c62828;border-bottom-color:#c62828}
+.tab .count{display:inline-block;margin-left:4px;padding:2px 6px;border-radius:12px;background:#edf1f4;color:#33404c}
+
+.panel-tools{display:flex;gap:8px;padding:10px;border-bottom:1px solid #e3e8ed}
+.panel-tools select{width:100%;padding:9px;border:1px solid #ccd5dd;border-radius:8px;background:#fff}
+
+#reportList{flex:1;overflow:auto}
+.report-item{display:grid;grid-template-columns:6px 1fr auto;gap:10px;padding:12px 11px;border-bottom:1px solid #edf0f3;cursor:pointer}
+.report-item:hover,.report-item.selected{background:#f5f8fa}
+.age-line{border-radius:6px;background:#198754}
+.age-line.yellow{background:#f2b705}.age-line.orange{background:#ef7c00}.age-line.red{background:#d62828}
+.report-title{font-weight:bold;font-size:14px;margin-bottom:3px}
+.report-meta{font-size:11px;color:#677480;line-height:1.5}
+.report-age{text-align:right;font-weight:bold;font-size:12px;white-space:nowrap}
+.priority-badge{display:inline-block;margin-top:5px;padding:3px 7px;border-radius:12px;font-size:10px;background:#edf1f4;color:#34414d}
+
+#details{display:none;position:absolute;right:0;top:76px;bottom:0;width:min(430px,100%);z-index:2500;background:#fff;border-left:1px solid #dce3e9;box-shadow:-10px 0 28px rgba(0,0,0,.15);overflow:auto}
+.details-header{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;gap:10px;padding:15px;background:#fff;border-bottom:1px solid #e1e6eb}
+.details-header h2{margin:0;font-size:18px}
+.close-btn{border:0;background:#edf1f4;border-radius:8px;width:34px;height:34px;cursor:pointer}
+.details-body{padding:15px}
+.detail-block{padding:12px 0;border-bottom:1px solid #e7ebef;font-size:13px;line-height:1.5}
+.detail-photo{display:block;width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-top:8px}
+.form-group{margin:13px 0}
+.form-group label{display:block;margin-bottom:6px;font-size:12px;font-weight:bold;color:#4c5965}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px;border:1px solid #cdd6de;border-radius:8px;background:#fff}
+.form-group textarea{min-height:82px;resize:vertical}
+.inline-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.photo-preview{display:none;width:100%;max-height:190px;object-fit:cover;border-radius:9px;margin-top:8px}
+.save-row{display:flex;gap:8px;margin-top:16px}
+.save-row button{flex:1;border:0;border-radius:9px;padding:11px;font-weight:bold;cursor:pointer}
+#saveDraftBtn{background:#1565c0;color:#fff}
+#resolveBtn{background:#198754;color:#fff}
+.notice{padding:11px;border-radius:9px;background:#fff3cd;color:#674d03;font-size:12px;line-height:1.45}
+.empty{padding:30px 18px;text-align:center;color:#6d7883}
+
+.marker{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);font-size:19px;background:#d62828}
+.marker.work{background:#ef7c00}.marker.resolved{background:#198754}
+
+@media(max-width:980px){
+  main{grid-template-columns:1.7fr 1fr}
+  .user-label{display:none}
+}
+@media(max-width:720px){
+  body{overflow:auto}
+  #app{height:auto;min-height:100%}
+  header{height:auto;align-items:flex-start;flex-wrap:wrap}
+  main{display:block;height:auto}
+  #mapSection{height:55vh;border-right:0;border-bottom:1px solid #d7dee5}
+  #sidePanel{height:45vh}
+  #details{position:fixed;top:0;width:100%}
+  .municipality{display:none}
+  .map-stats{display:none}
+}
+</style>
 </head>
 <body>
-<h1>Dashboard Comune</h1>
-<p>Versione V1 in sviluppo.</p>
+<div id="loading">Verifica accesso comunale...</div>
+
+<div id="app">
+  <header>
+    <div class="identity">
+      <div class="logo">Territorio <span>Live</span> — Comune</div>
+      <div class="municipality">
+        <h1 id="municipalityName">Dashboard Comune</h1>
+        <p id="provinceName"></p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div id="userLabel" class="user-label"></div>
+      <button id="refreshBtn" class="header-btn" type="button">↻ Aggiorna</button>
+      <button id="logoutBtn" class="header-btn" type="button">Esci</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="mapSection">
+      <div id="municipalityMap"></div>
+
+      <div class="map-toolbar">
+        <select id="categoryFilter">
+          <option value="Tutte">Tutte le categorie</option>
+        </select>
+        <select id="mapStatusFilter">
+          <option value="Tutti">Tutti gli stati</option>
+          <option value="aperta">Aperte</option>
+          <option value="in_lavorazione">In lavorazione</option>
+          <option value="risolta">Risolte</option>
+        </select>
+      </div>
+
+      <div id="mapStats" class="map-stats">Caricamento...</div>
+
+      <div class="legend">
+        🔴 Aperta<br>
+        🟠 In lavorazione<br>
+        🟢 Risolta
+      </div>
+    </section>
+
+    <aside id="sidePanel">
+      <div class="tabs">
+        <button class="tab active" data-tab="aperta">Aperte <span id="openCount" class="count">0</span></button>
+        <button class="tab" data-tab="in_lavorazione">In lavorazione <span id="workCount" class="count">0</span></button>
+        <button class="tab" data-tab="risolta">Risolte <span id="resolvedCount" class="count">0</span></button>
+      </div>
+
+      <div class="panel-tools">
+        <select id="listCategoryFilter">
+          <option value="Tutte">Tutte le categorie</option>
+        </select>
+        <select id="sortFilter">
+          <option value="priorita">Priorità e permanenza</option>
+          <option value="vecchie">Più vecchie</option>
+          <option value="recenti">Più recenti</option>
+        </select>
+      </div>
+
+      <div id="reportList"></div>
+    </aside>
+  </main>
+</div>
+
+<section id="details" aria-hidden="true">
+  <div class="details-header">
+    <div>
+      <h2 id="detailTitle">Segnalazione</h2>
+      <div id="detailSubtitle" style="font-size:12px;color:#677480;margin-top:4px"></div>
+    </div>
+    <button id="closeDetailsBtn" class="close-btn" type="button">✕</button>
+  </div>
+
+  <div class="details-body">
+    <div id="detailSummary"></div>
+
+    <div class="form-group">
+      <label for="statusInput">Stato operativo</label>
+      <select id="statusInput">
+        <option value="aperta">Da prendere in carico</option>
+        <option value="in_lavorazione">In lavorazione</option>
+        <option value="risolta">Risolta</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="priorityInput">Priorità assegnata dal Comune</label>
+      <select id="priorityInput">
+        <option value="">Automatica in base ai giorni</option>
+        <option value="bassa">Bassa</option>
+        <option value="media">Media</option>
+        <option value="alta">Alta</option>
+        <option value="urgente">Urgente</option>
+      </select>
+    </div>
+
+    <div class="inline-grid">
+      <div class="form-group">
+        <label for="dateInput">Data intervento</label>
+        <input id="dateInput" type="date">
+      </div>
+      <div class="form-group">
+        <label for="costInput">Costo (€) facoltativo</label>
+        <input id="costInput" type="number" min="0" step="0.01" placeholder="Es. 450,00">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="companyInput">Ditta incaricata</label>
+      <input id="companyInput" type="text" placeholder="Nome ditta o personale interno">
+    </div>
+
+    <div class="form-group">
+      <label for="descriptionInput">Descrizione dell’intervento</label>
+      <textarea id="descriptionInput" placeholder="Lavori effettuati..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="photoInput">Foto dopo l’intervento</label>
+      <input id="photoInput" type="file" accept="image/*">
+      <img id="photoPreview" class="photo-preview" alt="Anteprima foto risoluzione">
+    </div>
+
+    <div class="notice">
+      Per chiudere la segnalazione come risolta è richiesta una foto finale.
+      La stella comparirà automaticamente nella dashboard Gestore e nella mappa pubblica.
+    </div>
+
+    <div class="save-row">
+      <button id="saveDraftBtn" type="button">Salva aggiornamento</button>
+      <button id="resolveBtn" type="button">Segna come risolta</button>
+    </div>
+  </div>
+</section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  where,
+  updateDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAhAJOjQSXmzvo2QnuHb4EIDTK88DCHgm0",
+  authDomain: "territorio-live.firebaseapp.com",
+  projectId: "territorio-live",
+  storageBucket: "territorio-live.firebasestorage.app",
+  messagingSenderId: "1014933311241",
+  appId: "1:1014933311241:web:21cd7b52882677ede58dd8",
+  measurementId: "G-96WJ75QWLW"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const loading = document.getElementById("loading");
+const appView = document.getElementById("app");
+const municipalityName = document.getElementById("municipalityName");
+const provinceName = document.getElementById("provinceName");
+const userLabel = document.getElementById("userLabel");
+const refreshBtn = document.getElementById("refreshBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const categoryFilter = document.getElementById("categoryFilter");
+const mapStatusFilter = document.getElementById("mapStatusFilter");
+const listCategoryFilter = document.getElementById("listCategoryFilter");
+const sortFilter = document.getElementById("sortFilter");
+const reportList = document.getElementById("reportList");
+const mapStats = document.getElementById("mapStats");
+const details = document.getElementById("details");
+const detailTitle = document.getElementById("detailTitle");
+const detailSubtitle = document.getElementById("detailSubtitle");
+const detailSummary = document.getElementById("detailSummary");
+const closeDetailsBtn = document.getElementById("closeDetailsBtn");
+const statusInput = document.getElementById("statusInput");
+const priorityInput = document.getElementById("priorityInput");
+const dateInput = document.getElementById("dateInput");
+const costInput = document.getElementById("costInput");
+const companyInput = document.getElementById("companyInput");
+const descriptionInput = document.getElementById("descriptionInput");
+const photoInput = document.getElementById("photoInput");
+const photoPreview = document.getElementById("photoPreview");
+const saveDraftBtn = document.getElementById("saveDraftBtn");
+const resolveBtn = document.getElementById("resolveBtn");
+
+let map = null;
+let markers = [];
+let reports = [];
+let currentProfile = null;
+let selectedReport = null;
+let selectedPhotoBase64 = "";
+let activeTab = "aperta";
+let unsubscribeReports = null;
+
+function escapeHtml(value){
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function normalizeStatus(report){
+  const value = String(report.stato || "aperta").toLowerCase();
+  if(value === "risolta" || value === "risolto") return "risolta";
+  if(value === "in_lavorazione" || value === "lavorazione" || value === "presa_in_carico") return "in_lavorazione";
+  return "aperta";
+}
+
+function toDate(value){
+  if(!value) return null;
+  if(typeof value.toDate === "function") return value.toDate();
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function daysOpen(report){
+  const start = toDate(report.createdAt);
+  if(!start) return 0;
+  const end = normalizeStatus(report) === "risolta"
+    ? (toDate(report.resolvedAt) || new Date())
+    : new Date();
+  return Math.max(0,Math.floor((end - start) / 86400000));
+}
+
+function automaticPriority(report){
+  const days = daysOpen(report);
+  const category = String(report.categoria || "").toLowerCase();
+
+  if(category.includes("material") || category.includes("perdita") || category.includes("incend")) return "urgente";
+  if(days >= 15) return "urgente";
+  if(days >= 8) return "alta";
+  if(days >= 3) return "media";
+  return "bassa";
+}
+
+function effectivePriority(report){
+  return String(report.prioritaComune || "").toLowerCase() || automaticPriority(report);
+}
+
+function priorityScore(priority){
+  return {bassa:1,media:2,alta:3,urgente:4}[priority] || 1;
+}
+
+function ageClass(days){
+  if(days >= 15) return "red";
+  if(days >= 8) return "orange";
+  if(days >= 3) return "yellow";
+  return "";
+}
+
+function categoryEmoji(category){
+  const icons = {
+    "Buca stradale":"🕳️",
+    "Rifiuti / Discarica abusiva":"🚮",
+    "Veicolo abbandonato":"🚗",
+    "Illuminazione pubblica guasta":"💡",
+    "Segnaletica danneggiata":"🚧",
+    "Materiali pericolosi":"☣️",
+    "Perdita d'acqua":"💧",
+    "Arredo urbano danneggiato":"🧱"
+  };
+  return icons[category] || "📍";
+}
+
+function markerIcon(report){
+  const status = normalizeStatus(report);
+  const className = status === "risolta" ? "resolved" : status === "in_lavorazione" ? "work" : "";
+  const emoji = status === "risolta" ? "⭐" : categoryEmoji(report.categoria);
+  return L.divIcon({
+    html:`<div class="marker ${className}">${emoji}</div>`,
+    className:"",
+    iconSize:[40,40],
+    iconAnchor:[20,20],
+    popupAnchor:[0,-18]
+  });
+}
+
+function initMap(){
+  if(map) return;
+  map = L.map("municipalityMap").setView([41.1171,16.8719],13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19,
+    attribution:"© OpenStreetMap"
+  }).addTo(map);
+}
+
+function uniqueCategories(){
+  return [...new Set(reports.map(r => String(r.categoria || "").trim()).filter(Boolean))]
+    .sort((a,b) => a.localeCompare(b,"it"));
+}
+
+function rebuildCategories(){
+  const options = uniqueCategories()
+    .map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+    .join("");
+
+  const currentMap = categoryFilter.value;
+  const currentList = listCategoryFilter.value;
+
+  categoryFilter.innerHTML = `<option value="Tutte">Tutte le categorie</option>${options}`;
+  listCategoryFilter.innerHTML = `<option value="Tutte">Tutte le categorie</option>${options}`;
+
+  if([...categoryFilter.options].some(o => o.value === currentMap)) categoryFilter.value = currentMap;
+  if([...listCategoryFilter.options].some(o => o.value === currentList)) listCategoryFilter.value = currentList;
+}
+
+function renderMap(){
+  markers.forEach(marker => map.removeLayer(marker));
+  markers = [];
+
+  const category = categoryFilter.value;
+  const status = mapStatusFilter.value;
+  const bounds = [];
+
+  const visible = reports.filter(report => {
+    if(category !== "Tutte" && report.categoria !== category) return false;
+    if(status !== "Tutti" && normalizeStatus(report) !== status) return false;
+    return Number.isFinite(Number(report.lat)) && Number.isFinite(Number(report.lng));
+  });
+
+  visible.forEach(report => {
+    const marker = L.marker([Number(report.lat),Number(report.lng)],{icon:markerIcon(report)}).addTo(map);
+    marker.bindPopup(`
+      <strong>${escapeHtml(report.categoria || "Segnalazione")}</strong><br>
+      ${escapeHtml(report.indirizzo || "")}<br>
+      <button type="button" onclick="window.openMunicipalReport('${report.id}')" style="margin-top:8px;padding:7px 10px;cursor:pointer">
+        Gestisci
+      </button>
+    `);
+    markers.push(marker);
+    bounds.push([Number(report.lat),Number(report.lng)]);
+  });
+
+  const open = reports.filter(r => normalizeStatus(r) === "aperta").length;
+  const work = reports.filter(r => normalizeStatus(r) === "in_lavorazione").length;
+  const resolved = reports.filter(r => normalizeStatus(r) === "risolta").length;
+
+  mapStats.innerHTML = `<strong>Segnalazioni del Comune</strong><br>🔴 Aperte: ${open}<br>🟠 In lavorazione: ${work}<br>🟢 Risolte: ${resolved}`;
+
+  if(bounds.length === 1) map.setView(bounds[0],16);
+  else if(bounds.length > 1) map.fitBounds(bounds,{padding:[40,40],maxZoom:16});
+}
+
+function sortedListReports(){
+  const category = listCategoryFilter.value;
+
+  const list = reports.filter(report =>
+    normalizeStatus(report) === activeTab &&
+    (category === "Tutte" || report.categoria === category)
+  );
+
+  if(sortFilter.value === "vecchie"){
+    return list.sort((a,b) => (toDate(a.createdAt)?.getTime() || 0) - (toDate(b.createdAt)?.getTime() || 0));
+  }
+
+  if(sortFilter.value === "recenti"){
+    return list.sort((a,b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0));
+  }
+
+  return list.sort((a,b) => {
+    const priorityDifference = priorityScore(effectivePriority(b)) - priorityScore(effectivePriority(a));
+    if(priorityDifference !== 0) return priorityDifference;
+    return daysOpen(b) - daysOpen(a);
+  });
+}
+
+function renderList(){
+  const open = reports.filter(r => normalizeStatus(r) === "aperta").length;
+  const work = reports.filter(r => normalizeStatus(r) === "in_lavorazione").length;
+  const resolved = reports.filter(r => normalizeStatus(r) === "risolta").length;
+
+  document.getElementById("openCount").textContent = open;
+  document.getElementById("workCount").textContent = work;
+  document.getElementById("resolvedCount").textContent = resolved;
+
+  const list = sortedListReports();
+
+  if(list.length === 0){
+    reportList.innerHTML = `<div class="empty">Nessuna segnalazione in questa sezione.</div>`;
+    return;
+  }
+
+  reportList.innerHTML = list.map(report => {
+    const days = daysOpen(report);
+    const priority = effectivePriority(report);
+    return `
+      <article class="report-item ${selectedReport?.id === report.id ? "selected" : ""}" data-id="${report.id}">
+        <div class="age-line ${ageClass(days)}"></div>
+        <div>
+          <div class="report-title">${categoryEmoji(report.categoria)} ${escapeHtml(report.categoria || "Segnalazione")}</div>
+          <div class="report-meta">
+            ${escapeHtml(report.indirizzo || "Indirizzo non disponibile")}<br>
+            Aperta da ${days} ${days === 1 ? "giorno" : "giorni"}
+          </div>
+          <span class="priority-badge">Priorità ${escapeHtml(priority)}</span>
+        </div>
+        <div class="report-age">${days} gg<br>›</div>
+      </article>
+    `;
+  }).join("");
+
+  reportList.querySelectorAll(".report-item").forEach(item => {
+    item.addEventListener("click",() => openReport(item.dataset.id));
+  });
+}
+
+function renderAll(){
+  rebuildCategories();
+  renderMap();
+  renderList();
+}
+
+function openReport(reportId){
+  const report = reports.find(item => item.id === reportId);
+  if(!report) return;
+
+  selectedReport = report;
+  selectedPhotoBase64 = "";
+  photoInput.value = "";
+  photoPreview.style.display = "none";
+  photoPreview.removeAttribute("src");
+
+  const days = daysOpen(report);
+  detailTitle.textContent = report.categoria || "Segnalazione";
+  detailSubtitle.textContent = `${report.indirizzo || "Indirizzo non disponibile"} · ${days} giorni di permanenza`;
+
+  detailSummary.innerHTML = `
+    <div class="detail-block">
+      <strong>Comune:</strong> ${escapeHtml(report.comune || "-")}<br>
+      <strong>Stato:</strong> ${escapeHtml(normalizeStatus(report))}<br>
+      <strong>Priorità automatica:</strong> ${escapeHtml(automaticPriority(report))}<br>
+      <strong>Conferme:</strong> ${Number(report.conferme || 0)}
+      ${report.immagineBase64 ? `<img class="detail-photo" src="${report.immagineBase64}" alt="Foto segnalazione">` : ""}
+    </div>
+  `;
+
+  statusInput.value = normalizeStatus(report);
+  priorityInput.value = String(report.prioritaComune || "");
+  dateInput.value = String(report.dataIntervento || "");
+  costInput.value = report.costoIntervento ?? "";
+  companyInput.value = String(report.dittaIntervento || "");
+  descriptionInput.value = String(report.descrizioneIntervento || "");
+
+  if(report.resolvedImageBase64){
+    photoPreview.src = report.resolvedImageBase64;
+    photoPreview.style.display = "block";
+  }
+
+  details.style.display = "block";
+  details.setAttribute("aria-hidden","false");
+  renderList();
+}
+
+window.openMunicipalReport = openReport;
+
+function closeDetails(){
+  details.style.display = "none";
+  details.setAttribute("aria-hidden","true");
+}
+
+async function compressImage(file){
+  return new Promise((resolve,reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = reject;
+      image.onload = () => {
+        const maxWidth = 1280;
+        const scale = Math.min(1,maxWidth / image.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(image.width * scale);
+        canvas.height = Math.round(image.height * scale);
+        const context = canvas.getContext("2d");
+        context.drawImage(image,0,0,canvas.width,canvas.height);
+        resolve(canvas.toDataURL("image/jpeg",0.76));
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+photoInput.addEventListener("change",async () => {
+  const file = photoInput.files?.[0];
+  if(!file) return;
+
+  try{
+    selectedPhotoBase64 = await compressImage(file);
+    photoPreview.src = selectedPhotoBase64;
+    photoPreview.style.display = "block";
+  }catch(error){
+    console.error(error);
+    alert("Impossibile elaborare la foto.");
+  }
+});
+
+async function saveIntervention(forceResolved){
+  if(!selectedReport) return;
+
+  const newStatus = forceResolved ? "risolta" : statusInput.value;
+  const finalPhoto = selectedPhotoBase64 || selectedReport.resolvedImageBase64 || "";
+
+  if(newStatus === "risolta" && !finalPhoto){
+    alert("Per segnare la segnalazione come risolta devi caricare la foto finale.");
+    return;
+  }
+
+  if(forceResolved && !confirm("Confermi che l’intervento è concluso e che la segnalazione può essere contrassegnata come risolta?")){
+    return;
+  }
+
+  saveDraftBtn.disabled = true;
+  resolveBtn.disabled = true;
+
+  const data = {
+    stato:newStatus,
+    prioritaComune:priorityInput.value || "",
+    dataIntervento:dateInput.value || "",
+    dittaIntervento:companyInput.value.trim(),
+    costoIntervento:costInput.value === "" ? null : Number(costInput.value),
+    descrizioneIntervento:descriptionInput.value.trim(),
+    aggiornatoDalComune:currentProfile.comune,
+    aggiornatoDaUid:auth.currentUser.uid,
+    updatedAt:serverTimestamp()
+  };
+
+  if(finalPhoto) data.resolvedImageBase64 = finalPhoto;
+
+  if(newStatus === "in_lavorazione" && !selectedReport.presaInCaricoAt){
+    data.presaInCaricoAt = serverTimestamp();
+  }
+
+  if(newStatus === "risolta"){
+    data.resolvedAt = serverTimestamp();
+    data.risoltoDa = currentProfile.comune;
+  }
+
+  try{
+    await updateDoc(doc(db,"segnalazioni",selectedReport.id),data);
+    closeDetails();
+  }catch(error){
+    console.error(error);
+    alert("Salvataggio non riuscito. Verifica le autorizzazioni Firestore.");
+  }finally{
+    saveDraftBtn.disabled = false;
+    resolveBtn.disabled = false;
+  }
+}
+
+saveDraftBtn.addEventListener("click",() => saveIntervention(false));
+resolveBtn.addEventListener("click",() => saveIntervention(true));
+closeDetailsBtn.addEventListener("click",closeDetails);
+
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click",() => {
+    document.querySelectorAll(".tab").forEach(item => item.classList.remove("active"));
+    tab.classList.add("active");
+    activeTab = tab.dataset.tab;
+    renderList();
+  });
+});
+
+categoryFilter.addEventListener("change",renderMap);
+mapStatusFilter.addEventListener("change",renderMap);
+listCategoryFilter.addEventListener("change",renderList);
+sortFilter.addEventListener("change",renderList);
+
+refreshBtn.addEventListener("click",() => {
+  refreshBtn.textContent = "Aggiornato ✓";
+  renderAll();
+  setTimeout(() => refreshBtn.textContent = "↻ Aggiorna",1200);
+});
+
+logoutBtn.addEventListener("click",async () => {
+  await signOut(auth);
+  window.location.replace("./login.html");
+});
+
+async function loadMunicipalProfile(user){
+  /*
+    V1 DI PROVA
+    Per testare subito la dashboard, l'account autenticato viene associato
+    temporaneamente al Comune di Adelfia.
+
+    Nella fase successiva questo blocco verrà sostituito con il profilo
+    protetto salvato nella raccolta Firestore "utentiComuni".
+  */
+  return {
+    ruolo:"comune",
+    comune:"Adelfia",
+    provincia:"Bari",
+    attivo:true,
+    email:user.email || ""
+  };
+}
+
+function subscribeReports(){
+  if(unsubscribeReports) unsubscribeReports();
+
+  const reportsQuery = query(
+    collection(db,"segnalazioni"),
+    where("comune","==",currentProfile.comune)
+  );
+
+  unsubscribeReports = onSnapshot(reportsQuery,snapshot => {
+    reports = snapshot.docs
+      .map(item => ({id:item.id,...item.data()}))
+      .filter(report =>
+        !currentProfile.provincia ||
+        !report.provincia ||
+        String(report.provincia).trim() === String(currentProfile.provincia).trim()
+      );
+
+    renderAll();
+  },error => {
+    console.error(error);
+    alert("Impossibile caricare le segnalazioni del Comune. Controlla le regole Firestore.");
+  });
+}
+
+onAuthStateChanged(auth,async user => {
+  if(!user){
+    window.location.replace("./login.html");
+    return;
+  }
+
+  try{
+    currentProfile = await loadMunicipalProfile(user);
+
+    municipalityName.textContent = `Comune di ${currentProfile.comune}`;
+    provinceName.textContent = currentProfile.provincia ? `Provincia di ${currentProfile.provincia}` : "";
+    userLabel.textContent = user.email || "Operatore comunale";
+
+    initMap();
+    appView.style.display = "block";
+    loading.style.display = "none";
+
+    setTimeout(() => map.invalidateSize(),100);
+    subscribeReports();
+  }catch(error){
+    console.error(error);
+    alert("Accesso alla Dashboard Comune non riuscito: " + error.message);
+    await signOut(auth);
+    window.location.replace("./login.html");
+  }
+});
+</script>
 </body>
 </html>
