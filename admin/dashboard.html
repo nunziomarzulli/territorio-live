@@ -277,6 +277,69 @@ header{
   box-shadow:0 4px 18px rgba(0,0,0,.35);
 }
 
+#moderationAlert{
+  display:none;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 16px;
+  background:#5b1d1d;
+  border-bottom:1px solid #8f2a2a;
+  color:#ffd7d7;
+}
+
+#moderationAlert.active{
+  display:flex;
+}
+
+#moderationAlertText{
+  font-weight:bold;
+}
+
+#moderationAlertActions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+#showModerationBtn,
+#showAllReportsBtn{
+  border:none;
+  border-radius:8px;
+  padding:9px 12px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+#showModerationBtn{
+  background:#ffca28;
+  color:#111;
+}
+
+#showAllReportsBtn{
+  display:none;
+  background:#e0e0e0;
+  color:#222;
+}
+
+#showAllReportsBtn.active{
+  display:inline-block;
+}
+
+.moderation-warning{
+  margin-top:10px;
+  padding:10px;
+  border-radius:8px;
+  background:#ffe8e8;
+  border:1px solid #d32f2f;
+  color:#8b1e1e;
+}
+
+.approve-btn{
+  background:#2e7d32;
+  color:white;
+}
+
 @media(max-width:900px){
   #toolbar{
     grid-template-columns:repeat(2,minmax(130px,1fr));
@@ -384,6 +447,22 @@ header{
 
   </div>
 
+  <div id="moderationAlert" role="status" aria-live="polite">
+    <div id="moderationAlertText">
+      Nessuna segnalazione sospetta.
+    </div>
+
+    <div id="moderationAlertActions">
+      <button id="showModerationBtn" type="button">
+        Visualizza sospette
+      </button>
+
+      <button id="showAllReportsBtn" type="button">
+        Mostra tutte
+      </button>
+    </div>
+  </div>
+
   <div id="mapWrap">
     <div id="adminMap"></div>
 
@@ -423,6 +502,7 @@ import {
   query,
   orderBy,
   deleteDoc,
+  updateDoc,
   doc
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
@@ -453,10 +533,15 @@ const resetFiltersBtn = document.getElementById("resetFiltersBtn");
 const refreshBtn = document.getElementById("refreshBtn");
 const statsBox = document.getElementById("statsBox");
 const emptyOverlay = document.getElementById("emptyOverlay");
+const moderationAlert = document.getElementById("moderationAlert");
+const moderationAlertText = document.getElementById("moderationAlertText");
+const showModerationBtn = document.getElementById("showModerationBtn");
+const showAllReportsBtn = document.getElementById("showAllReportsBtn");
 
 let adminMap = null;
 let mapMarkers = [];
 let reports = [];
+let moderationOnly = false;
 
 function escapeHtml(value){
   return String(value ?? "")
@@ -612,6 +697,12 @@ function getFilteredReports(){
   return reports.filter(report => {
     const status = String(report.stato || "aperta").toLowerCase();
     const isResolved = status === "risolta" || status === "risolto";
+    const isPendingModeration =
+      String(report.moderazioneStato || "") === "da_controllare";
+
+    if(moderationOnly && !isPendingModeration){
+      return false;
+    }
 
     if(
       selectedProvince !== "Tutte" &&
@@ -723,7 +814,28 @@ function createPopupHtml(report){
         : ""
       }
 
+      ${String(report.moderazioneStato || "") === "da_controllare"
+        ? `<div class="moderation-warning">
+             <strong>⚠️ Da controllare</strong><br>
+             ${escapeHtml(
+               report.moderazioneMotivo ||
+               "Motivo non specificato"
+             )}
+           </div>`
+        : ""
+      }
+
       <div class="popup-actions">
+        ${String(report.moderazioneStato || "") === "da_controllare"
+          ? `<button
+               class="approve-btn"
+               type="button"
+               onclick="window.approveAdminReport('${report.id}')">
+               Approva foto
+             </button>`
+          : ""
+        }
+
         <a
           class="map-link"
           href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(report.lat + "," + report.lng)}"
@@ -743,7 +855,37 @@ function createPopupHtml(report){
   `;
 }
 
+function updateModerationAlert(){
+  const pendingCount = reports.filter(report =>
+    String(report.moderazioneStato || "") === "da_controllare"
+  ).length;
+
+  if(pendingCount > 0){
+    moderationAlert.classList.add("active");
+    moderationAlertText.textContent =
+      pendingCount === 1
+        ? "⚠️ 1 segnalazione sospetta da controllare"
+        : `⚠️ ${pendingCount} segnalazioni sospette da controllare`;
+
+    showModerationBtn.style.display =
+      moderationOnly ? "none" : "inline-block";
+
+    showAllReportsBtn.classList.toggle(
+      "active",
+      moderationOnly
+    );
+  }else{
+    moderationAlert.classList.remove("active");
+    moderationAlertText.textContent =
+      "Nessuna segnalazione sospetta.";
+    moderationOnly = false;
+    showAllReportsBtn.classList.remove("active");
+  }
+}
+
 function renderMap(){
+  updateModerationAlert();
+
   mapMarkers.forEach(marker => {
     adminMap.removeLayer(marker);
   });
@@ -802,6 +944,10 @@ function renderMap(){
     <strong>Visibili: ${mapMarkers.length}</strong><br>
     🔴 Aperte: ${openCount}<br>
     ⭐ Risolte: ${resolvedCount}
+    ${moderationOnly
+      ? "<br>⚠️ Modalità moderazione"
+      : ""
+    }
   `;
 
   if(bounds.length === 1){
@@ -844,6 +990,34 @@ async function loadReports(){
   refreshBtn.disabled = false;
   refreshBtn.textContent = "↻";
 }
+
+window.approveAdminReport = async function(reportId){
+  const confirmed = confirm(
+    "Confermi che la foto è valida?\n\n" +
+    "La segnalazione resterà pubblicata e verrà rimossa dalla coda di controllo."
+  );
+
+  if(!confirmed){
+    return;
+  }
+
+  try{
+    await updateDoc(
+      doc(db,"segnalazioni",reportId),
+      {
+        moderazioneStato:"approvata",
+        moderazioneMotivo:"",
+        spamScore:0
+      }
+    );
+
+    await loadReports();
+
+  }catch(error){
+    console.error("Errore approvazione:",error);
+    alert("Approvazione non riuscita.");
+  }
+};
 
 window.deleteAdminReport = async function(reportId){
   const confirmed = confirm(
@@ -916,6 +1090,16 @@ municipalityFilter.addEventListener("change",renderMap);
 categoryFilter.addEventListener("change",renderMap);
 statusFilter.addEventListener("change",renderMap);
 
+showModerationBtn.addEventListener("click",() => {
+  moderationOnly = true;
+  renderMap();
+});
+
+showAllReportsBtn.addEventListener("click",() => {
+  moderationOnly = false;
+  renderMap();
+});
+
 resetFiltersBtn.addEventListener("click",() => {
   provinceFilter.value = "Tutte";
 
@@ -933,6 +1117,7 @@ resetFiltersBtn.addEventListener("click",() => {
   municipalityFilter.value = "Tutti";
   categoryFilter.value = "Tutte";
   statusFilter.value = "Tutte";
+  moderationOnly = false;
 
   renderMap();
 });
