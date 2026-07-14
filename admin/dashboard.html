@@ -76,14 +76,36 @@ header{
   text-overflow:ellipsis;
 }
 
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+}
+
+#refreshBtn,
 #logoutBtn{
   border:none;
   border-radius:9px;
   padding:10px 15px;
-  background:#c62828;
   color:white;
   font-weight:bold;
   cursor:pointer;
+  white-space:nowrap;
+}
+
+#refreshBtn{
+  background:#2e7d32;
+}
+
+#refreshBtn:disabled,
+#logoutBtn:disabled{
+  opacity:.7;
+  cursor:not-allowed;
+}
+
+#logoutBtn{
+  background:#c62828;
 }
 
 #toolbar{
@@ -153,22 +175,6 @@ header{
   box-shadow:0 4px 15px rgba(0,0,0,.35);
   font-size:14px;
   line-height:1.6;
-}
-
-#refreshBtn{
-  position:absolute;
-  right:15px;
-  bottom:18px;
-  z-index:1000;
-  border:none;
-  border-radius:50%;
-  width:48px;
-  height:48px;
-  background:#2e7d32;
-  color:white;
-  font-size:22px;
-  cursor:pointer;
-  box-shadow:0 4px 15px rgba(0,0,0,.35);
 }
 
 .category-marker{
@@ -386,9 +392,14 @@ header{
     min-width:145px;
   }
 
-  #refreshBtn{
-    right:8px;
-    bottom:8px;
+  .header-actions{
+    gap:6px;
+  }
+
+  #refreshBtn,
+  #logoutBtn{
+    padding:9px 10px;
+    font-size:12px;
   }
 }
 </style>
@@ -406,7 +417,13 @@ header{
       <p id="adminEmail"></p>
     </div>
 
-    <button id="logoutBtn" type="button">Esci</button>
+    <div class="header-actions">
+      <button id="refreshBtn" type="button">
+        ↻ Aggiorna segnalazioni
+      </button>
+
+      <button id="logoutBtn" type="button">Esci</button>
+    </div>
   </header>
 
   <div id="toolbar">
@@ -474,9 +491,6 @@ header{
       Caricamento...
     </div>
 
-    <button id="refreshBtn" type="button" title="Aggiorna">
-      ↻
-    </button>
   </div>
 
 </div>
@@ -941,7 +955,7 @@ function renderMap(){
       : "none";
 
   statsBox.innerHTML = `
-    <strong>Visibili: ${mapMarkers.length}</strong><br>
+    <strong>📍 Segnalazioni visualizzate: ${mapMarkers.length}</strong><br>
     🔴 Aperte: ${openCount}<br>
     ⭐ Risolte: ${resolvedCount}
     ${moderationOnly
@@ -962,7 +976,7 @@ function renderMap(){
 
 async function loadReports(){
   refreshBtn.disabled = true;
-  refreshBtn.textContent = "…";
+  refreshBtn.textContent = "⏳ Aggiornamento...";
   statsBox.textContent = "Caricamento...";
 
   try{
@@ -988,7 +1002,7 @@ async function loadReports(){
   }
 
   refreshBtn.disabled = false;
-  refreshBtn.textContent = "↻";
+  refreshBtn.textContent = "↻ Aggiorna segnalazioni";
 }
 
 window.approveAdminReport = async function(reportId){
