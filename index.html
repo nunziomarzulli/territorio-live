@@ -1463,6 +1463,7 @@ async function analyzePhotoForModeration(base64Image) {
 
     let luminositaTotale = 0;
     let pixelScuri = 0;
+    let pixelChiari = 0;
     let pixelAnalizzati = 0;
 
     for (let i = 0; i < pixels.length; i += 4) {
@@ -1484,8 +1485,12 @@ async function analyzePhotoForModeration(base64Image) {
       luminositaTotale += luminosita;
       pixelAnalizzati++;
 
-      if (luminosita < 28) {
+      if (luminosita < 20) {
         pixelScuri++;
+      }
+
+      if (luminosita > 245) {
+        pixelChiari++;
       }
     }
 
@@ -1503,20 +1508,31 @@ async function analyzePhotoForModeration(base64Image) {
     const percentualePixelScuri =
       pixelScuri / pixelAnalizzati;
 
+    const percentualePixelChiari =
+      pixelChiari / pixelAnalizzati;
+
     result.moderazioneControlli.luminositaMedia =
       Number(luminositaMedia.toFixed(2));
 
     result.moderazioneControlli.percentualePixelScuri =
       Number(percentualePixelScuri.toFixed(4));
 
-    const fotoQuasiNera =
-      luminositaMedia < 30 ||
-      percentualePixelScuri >= 0.92;
+    result.moderazioneControlli.percentualePixelChiari =
+      Number(percentualePixelChiari.toFixed(4));
 
-    if (fotoQuasiNera) {
+    const fotoQuasiNera =
+      luminositaMedia < 20 ||
+      percentualePixelScuri >= 0.95;
+
+    const fotoQuasiBianca =
+      luminositaMedia > 245 ||
+      percentualePixelChiari >= 0.95;
+
+    if (fotoQuasiNera || fotoQuasiBianca) {
       result.spamScore = 60;
       result.moderazioneStato = "da_controllare";
-      result.moderazioneMotivo = "Foto troppo scura";
+      result.moderazioneMotivo =
+        "Foto probabilmente non valida";
     }
 
     return result;
