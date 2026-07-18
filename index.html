@@ -567,7 +567,7 @@ body.image-viewer-open{
   <div id="topMenu">
   <button id="myReportsBtn">📋<span>LE MIE<br>SEGNALAZIONI</span></button>
   <button id="howItWorksBtn">ⓘ<span>COME<br>FUNZIONA</span></button>
-  <button id="contactManagerBtn">✉️<span>CONTATTA<br>IL GESTORE</span></button>
+  <button id="contactManagerBtn">🏛️<span>PER COMUNI<br>ED ENTI</span></button>
 </div>  
   <div class="logo">
   <img src="icon-193.png" alt="Territorio Live Logo" class="logo-img">
@@ -787,31 +787,58 @@ body.image-viewer-open{
 
   <div class="info-page">
 
-    <h2>✉️ Contatta il gestore</h2>
+    <h2>🏛️ Territorio Live per Comuni ed Enti</h2>
 
     <div class="info-card">
-      <div class="info-icon">💬</div>
+      <div class="info-icon">🏢</div>
       <div>
-        <strong>Hai trovato un problema?</strong>
-        <p>Segnala bug, suggerisci nuove funzioni o contattaci per qualsiasi informazione.</p>
+        <strong>Dashboard dedicata agli Enti</strong>
+        <p>
+          Sei un Comune, un Ente pubblico o una società partecipata?
+          Richiedi l’attivazione della Dashboard Comune di Territorio Live.
+        </p>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-icon">🔒</div>
+      <div>
+        <strong>Richiesta da email istituzionale</strong>
+        <p>
+          Per motivi di sicurezza, le richieste vengono prese in considerazione
+          esclusivamente se inviate da un indirizzo email ufficiale del Comune
+          o dell’Ente, come protocollo, ufficio tecnico, lavori pubblici o PEC.
+        </p>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-icon">✅</div>
+      <div>
+        <strong>Attivazione verificata manualmente</strong>
+        <p>
+          Il gestore verifica l’identità dell’Ente prima di abilitare l’accesso
+          alla Dashboard Comune. Non è prevista una registrazione automatica.
+        </p>
       </div>
     </div>
 
     <div class="info-card">
       <div class="info-icon">📧</div>
       <div>
-        <strong>Email</strong>
+        <strong>Email di riferimento</strong>
         <p>info@territoriolive.it</p>
       </div>
     </div>
 
     <button
       class="primary"
-      onclick="location.href='mailto:info@territoriolive.it?subject=Contatto%20da%20Territorio%20Live'">
-      📩 Invia una email
+      type="button"
+      onclick="location.href='mailto:info@territoriolive.it?subject=Richiesta%20attivazione%20Dashboard%20Comune&body=Comune/Ente%3A%0A%0AProvincia%3A%0A%0AReferente%3A%0A%0ARuolo%3A%0A%0AEmail%20istituzionale%3A%0A%0ATelefono%3A%0A%0ARichiediamo%20l%27attivazione%20della%20Dashboard%20Comune%20di%20Territorio%20Live.'">
+      📩 Richiedi attivazione
     </button>
 
-    <button id="backFromContactBtn" class="secondary">
+    <button id="backFromContactBtn" class="secondary" type="button">
       ← Torna alla Home
     </button>
 
