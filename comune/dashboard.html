@@ -81,6 +81,7 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
 .save-row button{flex:1;border:0;border-radius:9px;padding:11px;font-weight:bold;cursor:pointer}
 #saveDraftBtn{background:#1565c0;color:#fff}
 #resolveBtn{background:#198754;color:#fff}
+#pdfBtn{background:#37474f;color:#fff;display:none}
 .notice{padding:11px;border-radius:9px;background:#fff3cd;color:#674d03;font-size:12px;line-height:1.45}
 .empty{padding:30px 18px;text-align:center;color:#6d7883}
 
@@ -281,12 +282,14 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
     <div class="save-row">
       <button id="saveDraftBtn" type="button">Salva aggiornamento</button>
       <button id="resolveBtn" type="button">Segna come risolta</button>
+      <button id="pdfBtn" type="button">Scarica PDF</button>
     </div>
   </div>
 </section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import {
@@ -350,6 +353,7 @@ const photoInput = document.getElementById("photoInput");
 const photoPreview = document.getElementById("photoPreview");
 const saveDraftBtn = document.getElementById("saveDraftBtn");
 const resolveBtn = document.getElementById("resolveBtn");
+const pdfBtn = document.getElementById("pdfBtn");
 
 let map = null;
 let markerClusterGroup = null;
@@ -809,6 +813,8 @@ function openReport(reportId){
     photoPreview.style.display = "block";
   }
 
+  pdfBtn.style.display = normalizeStatus(report) === "risolta" ? "block" : "none";
+
   details.style.display = "block";
   details.setAttribute("aria-hidden","false");
   renderList();
@@ -967,8 +973,231 @@ if(descriptionInput.value.trim() !== String(selectedReport.descrizioneIntervento
   }
 }
 
+
+function formatDateOnly(value){
+  const date = toDate(value);
+  if(!date) return "-";
+  return new Intl.DateTimeFormat("it-IT",{
+    day:"2-digit",
+    month:"2-digit",
+    year:"numeric"
+  }).format(date);
+}
+
+function formatCurrency(value){
+  if(value === null || value === undefined || value === "") return "Non indicato";
+  const number = Number(value);
+  if(!Number.isFinite(number)) return "Non indicato";
+  return new Intl.NumberFormat("it-IT",{
+    style:"currency",
+    currency:"EUR"
+  }).format(number);
+}
+
+function resolutionDuration(report){
+  const start = toDate(report.createdAt);
+  const end = toDate(report.resolvedAt) || toDate(report.dataIntervento);
+  if(!start || !end) return "Non disponibile";
+
+  const totalMinutes = Math.max(0,Math.floor((end - start) / 60000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  const parts = [];
+  if(days) parts.push(`${days} ${days === 1 ? "giorno" : "giorni"}`);
+  if(hours) parts.push(`${hours} ${hours === 1 ? "ora" : "ore"}`);
+  if(!days && minutes) parts.push(`${minutes} minuti`);
+
+  return parts.length ? parts.join(" e ") : "Meno di un minuto";
+}
+
+async function imageToPdfData(imageSource){
+  if(!imageSource) return null;
+
+  return new Promise(resolve => {
+    const image = new Image();
+    image.onload = () => {
+      try{
+        const canvas = document.createElement("canvas");
+        const maxWidth = 1400;
+        const scale = Math.min(1,maxWidth / image.width);
+        canvas.width = Math.max(1,Math.round(image.width * scale));
+        canvas.height = Math.max(1,Math.round(image.height * scale));
+        const context = canvas.getContext("2d");
+        context.fillStyle = "#ffffff";
+        context.fillRect(0,0,canvas.width,canvas.height);
+        context.drawImage(image,0,0,canvas.width,canvas.height);
+        resolve({
+          data:canvas.toDataURL("image/jpeg",0.82),
+          width:canvas.width,
+          height:canvas.height
+        });
+      }catch(error){
+        console.error(error);
+        resolve(null);
+      }
+    };
+    image.onerror = () => resolve(null);
+    image.src = imageSource;
+  });
+}
+
+function addWrappedText(pdf,text,x,y,maxWidth,lineHeight=6){
+  const lines = pdf.splitTextToSize(String(text || "-"),maxWidth);
+  pdf.text(lines,x,y);
+  return y + (lines.length * lineHeight);
+}
+
+async function generateInterventionPdf(report){
+  if(!report || normalizeStatus(report) !== "risolta"){
+    alert("Il PDF può essere generato solo per un intervento concluso.");
+    return;
+  }
+
+  if(!window.jspdf?.jsPDF){
+    alert("Libreria PDF non disponibile. Ricarica la pagina e riprova.");
+    return;
+  }
+
+  pdfBtn.disabled = true;
+  pdfBtn.textContent = "Creazione PDF...";
+
+  try{
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
+
+    const beforeImage = await imageToPdfData(report.immagineBase64 || "");
+    const afterImage = await imageToPdfData(report.resolvedImageBase64 || "");
+
+    pdf.setFillColor(23,32,42);
+    pdf.rect(0,0,pageWidth,29,"F");
+    pdf.setTextColor(255,255,255);
+    pdf.setFont("helvetica","bold");
+    pdf.setFontSize(19);
+    pdf.text("Territorio",margin,12);
+    pdf.setTextColor(31,157,85);
+    pdf.text("Live",49,12);
+    pdf.setTextColor(255,255,255);
+    pdf.setFontSize(11);
+    pdf.text(`Comune di ${currentProfile?.comune || report.comune || ""}`,margin,21);
+    pdf.setFontSize(15);
+    pdf.text("RELAZIONE DI INTERVENTO",pageWidth - margin,17,{align:"right"});
+
+    let y = 39;
+    pdf.setTextColor(23,32,42);
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica","bold");
+    pdf.text("N. pratica:",margin,y);
+    pdf.setLineWidth(0.4);
+    pdf.line(margin + 24,y + 1,pageWidth - margin,y + 1);
+    y += 11;
+
+    const drawRow = (label,value) => {
+      pdf.setFont("helvetica","bold");
+      pdf.text(label,margin,y);
+      pdf.setFont("helvetica","normal");
+      y = addWrappedText(pdf,value,margin + 43,y,contentWidth - 43,5.5);
+      y += 3;
+    };
+
+    drawRow("Categoria:",report.categoria || "-");
+    drawRow("Indirizzo:",report.indirizzo || "-");
+    drawRow("Data segnalazione:",formatDateTime(report.createdAt));
+    drawRow("Data presa in carico:",formatDateTime(report.presaInCaricoAt));
+    drawRow("Data intervento:",report.dataIntervento ? formatDateOnly(report.dataIntervento) : formatDateTime(report.resolvedAt));
+    drawRow("Tempo di risoluzione:",resolutionDuration(report));
+    drawRow("Intervento eseguito da:",report.interventoEseguitoDa || report.risoltoDa || "Non noto");
+    drawRow("Costo:",formatCurrency(report.costoIntervento));
+    drawRow("Coordinate GPS:",Number.isFinite(Number(report.lat)) && Number.isFinite(Number(report.lng)) ? `${Number(report.lat).toFixed(6)}, ${Number(report.lng).toFixed(6)}` : "Non disponibili");
+
+    y += 2;
+    pdf.setDrawColor(210,218,225);
+    pdf.line(margin,y,pageWidth - margin,y);
+    y += 8;
+    pdf.setFont("helvetica","bold");
+    pdf.setFontSize(12);
+    pdf.text("Descrizione dei lavori",margin,y);
+    y += 7;
+    pdf.setFont("helvetica","normal");
+    pdf.setFontSize(10.5);
+    y = addWrappedText(pdf,report.descrizioneIntervento || "Nessuna descrizione inserita.",margin,y,contentWidth,5.5);
+    y += 7;
+
+    const ensureSpace = needed => {
+      if(y + needed > pageHeight - 18){
+        pdf.addPage();
+        y = 18;
+      }
+    };
+
+    const addPhoto = (title,imageData) => {
+      ensureSpace(78);
+      pdf.setFont("helvetica","bold");
+      pdf.setFontSize(12);
+      pdf.text(title,margin,y);
+      y += 6;
+
+      if(!imageData){
+        pdf.setFont("helvetica","normal");
+        pdf.setFontSize(10);
+        pdf.text("Foto non disponibile.",margin,y + 6);
+        y += 18;
+        return;
+      }
+
+      const maxW = contentWidth;
+      const maxH = 72;
+      const ratio = imageData.width / imageData.height;
+      let imageWidth = maxW;
+      let imageHeight = imageWidth / ratio;
+
+      if(imageHeight > maxH){
+        imageHeight = maxH;
+        imageWidth = imageHeight * ratio;
+      }
+
+      const x = margin + ((contentWidth - imageWidth) / 2);
+      pdf.addImage(imageData.data,"JPEG",x,y,imageWidth,imageHeight,undefined,"FAST");
+      y += imageHeight + 9;
+    };
+
+    addPhoto("Foto prima dell'intervento",beforeImage);
+    addPhoto("Foto dopo l'intervento",afterImage);
+
+    ensureSpace(24);
+    pdf.setDrawColor(210,218,225);
+    pdf.line(margin,y,pageWidth - margin,y);
+    y += 7;
+    pdf.setFont("helvetica","normal");
+    pdf.setFontSize(9);
+    pdf.text(`Documento generato da Territorio Live il ${formatDateTime(new Date())}`,margin,y);
+    pdf.text(`Comune di ${currentProfile?.comune || report.comune || ""}`,pageWidth - margin,y,{align:"right"});
+
+    const fileCategory = String(report.categoria || "intervento")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"")
+      .replace(/[^a-zA-Z0-9]+/g,"-")
+      .replace(/^-|-$/g,"")
+      .toLowerCase();
+
+    pdf.save(`relazione-intervento-${fileCategory || "segnalazione"}-${report.id.slice(0,8)}.pdf`);
+  }catch(error){
+    console.error(error);
+    alert("Impossibile generare il PDF dell'intervento.");
+  }finally{
+    pdfBtn.disabled = false;
+    pdfBtn.textContent = "Scarica PDF";
+  }
+}
+
 saveDraftBtn.addEventListener("click",() => saveIntervention(false));
 resolveBtn.addEventListener("click",() => saveIntervention(true));
+pdfBtn.addEventListener("click",() => generateInterventionPdf(selectedReport));
 closeDetailsBtn.addEventListener("click",closeDetails);
 
 document.querySelectorAll(".tab").forEach(tab => {
