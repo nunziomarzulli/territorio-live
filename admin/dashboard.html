@@ -691,18 +691,14 @@ function getCategoryEmoji(category){
 
 function getCategoryColor(category){
   const colors = {
-    "Buca stradale":"#d32f2f",
-    "Rifiuti / Discarica abusiva":"#2e7d32",
+    "Buca stradale":"#ffc107",
+    "Rifiuti / Discarica abusiva":"#d32f2f",
     "Veicolo abbandonato":"#616161",
-    "Illuminazione pubblica guasta":"#fbc02d",
+    "Illuminazione pubblica guasta":"#ffeb3b",
     "Segnaletica danneggiata":"#f57c00",
     "Materiali pericolosi":"#7b1fa2",
     "Perdita d'acqua":"#1976d2",
-    "Arredo urbano danneggiato":"#795548",
-    "Discarica a cielo aperto":"#388e3c",
-    "Sversamento sospetto":"#0288d1",
-    "Albero o ramo pericolante":"#1b5e20",
-    "Incendio":"#b71c1c"
+    "Arredo urbano danneggiato":"#795548"
   };
 
   return colors[category] || "#c62828";
@@ -1202,7 +1198,48 @@ function initMap(){
     removeOutsideVisibleBounds:true,
     animate:true,
     maxClusterRadius:55,
-    disableClusteringAtZoom:17
+    disableClusteringAtZoom:17,
+
+    iconCreateFunction(cluster){
+      const childCount = cluster.getChildCount();
+
+      let backgroundColor = "#ffc107";
+      let clusterSize = 42;
+
+      if(childCount >= 20 && childCount < 100){
+        backgroundColor = "#d32f2f";
+        clusterSize = 48;
+      }else if(childCount >= 100){
+        backgroundColor = "#7b1fa2";
+        clusterSize = 56;
+      }
+
+      return L.divIcon({
+        html:`
+          <div style="
+            width:${clusterSize}px;
+            height:${clusterSize}px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border-radius:50%;
+            background:${backgroundColor};
+            border:3px solid rgba(255,255,255,.92);
+            box-shadow:
+              0 0 0 6px ${backgroundColor}55,
+              0 3px 10px rgba(0,0,0,.4);
+            color:${backgroundColor === "#ffc107" ? "#111" : "#fff"};
+            font-size:${childCount >= 100 ? "16px" : "14px"};
+            font-weight:bold;
+          ">
+            ${childCount}
+          </div>
+        `,
+        className:"",
+        iconSize:[clusterSize,clusterSize],
+        iconAnchor:[clusterSize / 2,clusterSize / 2]
+      });
+    }
   });
 
   adminMap.addLayer(markerClusterGroup);
