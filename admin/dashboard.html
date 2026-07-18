@@ -361,6 +361,17 @@ header{
   color:white;
 }
 
+.resolution-editor{
+  margin-top:10px;
+  padding:10px;
+  border-radius:9px;
+  background:#f1f5f2;
+  border:1px solid #cfd8d1;
+}
+.resolution-editor label{display:block;margin:7px 0 4px;font-size:12px;font-weight:bold}
+.resolution-editor select,.resolution-editor input{width:100%;padding:8px;border:1px solid #bbb;border-radius:7px;background:#fff;color:#222}
+.save-resolution-btn{margin-top:8px;background:#2e7d32;color:#fff}
+
 @media(max-width:900px){
   #toolbar{
     grid-template-columns:repeat(2,minmax(130px,1fr));
@@ -1138,6 +1149,31 @@ function createPopupHtml(report){
            <div class="popup-row">
              <strong>Tempo di risoluzione:</strong>
              ${escapeHtml(getResolutionDurationText(report))}
+           </div>
+
+           <div class="popup-row">
+             <strong>Risoluzione segnalata da:</strong>
+             ${escapeHtml(report.risoluzioneSegnalataDa || "Non disponibile")}
+           </div>
+
+           <div class="popup-row">
+             <strong>Intervento eseguito da:</strong>
+             ${escapeHtml(report.interventoEseguitoDa || report.risoltoDa || "Non noto")}
+           </div>
+
+           <div class="resolution-editor">
+             <label for="executorType-${report.id}">Tipo soggetto</label>
+             <select id="executorType-${report.id}">
+               <option value="non_noto" ${(report.interventoEseguitoDaTipo || "non_noto") === "non_noto" ? "selected" : ""}>Non noto</option>
+               <option value="comune" ${report.interventoEseguitoDaTipo === "comune" ? "selected" : ""}>Comune</option>
+               <option value="ditta" ${report.interventoEseguitoDaTipo === "ditta" ? "selected" : ""}>Ditta incaricata</option>
+               <option value="associazione" ${report.interventoEseguitoDaTipo === "associazione" ? "selected" : ""}>Associazione</option>
+               <option value="cittadino" ${report.interventoEseguitoDaTipo === "cittadino" ? "selected" : ""}>Cittadino / privato</option>
+               <option value="altro" ${report.interventoEseguitoDaTipo === "altro" ? "selected" : ""}>Altro soggetto</option>
+             </select>
+             <label for="executorName-${report.id}">Nome visualizzato pubblicamente</label>
+             <input id="executorName-${report.id}" type="text" value="${escapeHtml(report.interventoEseguitoDa || report.risoltoDa || "Non noto")}">
+             <button class="save-resolution-btn" type="button" onclick="window.saveResolutionExecutor('${report.id}')">Salva attribuzione</button>
            </div>`
         : ""
       }
@@ -1352,6 +1388,39 @@ async function loadReports(){
   refreshBtn.disabled = false;
   refreshBtn.textContent = "↻ Aggiorna segnalazioni";
 }
+
+
+window.saveResolutionExecutor = async function(reportId){
+  const typeElement = document.getElementById(`executorType-${reportId}`);
+  const nameElement = document.getElementById(`executorName-${reportId}`);
+  if(!typeElement || !nameElement) return;
+
+  let name = nameElement.value.trim();
+  const type = typeElement.value;
+  const report = reports.find(item => item.id === reportId);
+
+  if(type === "non_noto") name = "Non noto";
+  if(type === "comune" && !name) name = report?.comune ? `Comune di ${report.comune}` : "Comune";
+  if(!name){
+    alert("Inserisci il nome del soggetto oppure seleziona Non noto.");
+    return;
+  }
+
+  try{
+    await updateDoc(doc(db,"segnalazioni",reportId),{
+      interventoEseguitoDa:name,
+      interventoEseguitoDaTipo:type,
+      interventoEseguitoDaAggiornatoAt:new Date().toISOString(),
+      interventoEseguitoDaAggiornatoDa:auth.currentUser?.email || "admin",
+      risoltoDa:name
+    });
+    await loadReports();
+    alert("Attribuzione della risoluzione aggiornata.");
+  }catch(error){
+    console.error("Errore aggiornamento attribuzione:",error);
+    alert("Aggiornamento non riuscito.");
+  }
+};
 
 window.approveAdminReport = async function(reportId){
   const confirmed = confirm(
