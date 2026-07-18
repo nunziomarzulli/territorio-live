@@ -412,6 +412,104 @@ header{
     font-size:12px;
   }
 }
+
+/* Visualizzatore foto a schermo intero */
+.popup img{
+  cursor:zoom-in;
+}
+
+#imageViewer{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(0,0,0,.92);
+  z-index:10000;
+}
+
+#imageViewer.active{
+  display:flex;
+}
+
+#imageViewerContent{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:100%;
+}
+
+#imageViewerImage{
+  display:block;
+  max-width:96vw;
+  max-height:92vh;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+  border-radius:10px;
+  box-shadow:0 8px 35px rgba(0,0,0,.55);
+}
+
+#imageViewerClose{
+  position:absolute;
+  top:8px;
+  right:8px;
+  width:46px;
+  height:46px;
+  padding:0;
+  border:2px solid rgba(255,255,255,.8);
+  border-radius:50%;
+  background:rgba(0,0,0,.65);
+  color:white;
+  font-size:30px;
+  line-height:40px;
+  cursor:pointer;
+  z-index:2;
+}
+
+#imageViewerCaption{
+  position:absolute;
+  left:50%;
+  bottom:8px;
+  transform:translateX(-50%);
+  max-width:90%;
+  padding:8px 12px;
+  border-radius:9px;
+  background:rgba(0,0,0,.65);
+  color:white;
+  font-size:14px;
+  text-align:center;
+}
+
+body.image-viewer-open{
+  overflow:hidden;
+}
+
+@media(max-width:560px){
+  #imageViewer{
+    padding:12px;
+  }
+
+  #imageViewerImage{
+    max-width:100%;
+    max-height:88vh;
+    border-radius:7px;
+  }
+
+  #imageViewerClose{
+    top:4px;
+    right:4px;
+  }
+
+  #imageViewerCaption{
+    bottom:4px;
+    font-size:12px;
+  }
+}
+
 </style>
 </head>
 
@@ -505,6 +603,31 @@ header{
 
 </div>
 
+
+<div
+  id="imageViewer"
+  role="dialog"
+  aria-modal="true"
+  aria-hidden="true"
+  aria-label="Anteprima foto ingrandita">
+
+  <div id="imageViewerContent">
+    <button
+      id="imageViewerClose"
+      type="button"
+      aria-label="Chiudi foto">
+      ×
+    </button>
+
+    <img
+      id="imageViewerImage"
+      src=""
+      alt="Foto ingrandita">
+
+    <div id="imageViewerCaption"></div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
@@ -563,11 +686,113 @@ const moderationAlertText = document.getElementById("moderationAlertText");
 const showModerationBtn = document.getElementById("showModerationBtn");
 const showAllReportsBtn = document.getElementById("showAllReportsBtn");
 
+const imageViewer = document.getElementById("imageViewer");
+const imageViewerImage = document.getElementById("imageViewerImage");
+const imageViewerClose = document.getElementById("imageViewerClose");
+const imageViewerCaption = document.getElementById("imageViewerCaption");
+
+let imageViewerHistoryActive = false;
+
+
 let adminMap = null;
 let markerClusterGroup = null;
 let mapMarkers = [];
 let reports = [];
 let moderationOnly = false;
+
+
+function openImageViewer(imageSource, caption){
+  if(!imageSource){
+    return;
+  }
+
+  imageViewerImage.src = imageSource;
+  imageViewerImage.alt = caption || "Foto ingrandita";
+  imageViewerCaption.textContent = caption || "";
+  imageViewer.classList.add("active");
+  imageViewer.setAttribute("aria-hidden","false");
+  document.body.classList.add("image-viewer-open");
+
+  if(!imageViewerHistoryActive){
+    history.pushState(
+      {
+        territorioLiveImageViewer:true
+      },
+      "",
+      window.location.href
+    );
+
+    imageViewerHistoryActive = true;
+  }
+
+  imageViewerClose.focus();
+}
+
+function closeImageViewer(useBrowserHistory = true){
+  if(!imageViewer.classList.contains("active")){
+    return;
+  }
+
+  imageViewer.classList.remove("active");
+  imageViewer.setAttribute("aria-hidden","true");
+  imageViewerImage.src = "";
+  imageViewerCaption.textContent = "";
+  document.body.classList.remove("image-viewer-open");
+
+  if(useBrowserHistory && imageViewerHistoryActive){
+    imageViewerHistoryActive = false;
+    history.back();
+  }else{
+    imageViewerHistoryActive = false;
+  }
+}
+
+document.addEventListener("click",event => {
+  const clickedImage = event.target.closest(".zoomable-report-image");
+
+  if(clickedImage){
+    event.preventDefault();
+    event.stopPropagation();
+
+    openImageViewer(
+      clickedImage.src,
+      clickedImage.dataset.caption ||
+      clickedImage.alt ||
+      "Foto segnalazione"
+    );
+
+    return;
+  }
+
+  if(
+    imageViewer.classList.contains("active") &&
+    (
+      event.target === imageViewer ||
+      event.target === imageViewerContent
+    )
+  ){
+    closeImageViewer();
+  }
+});
+
+imageViewerClose.addEventListener("click",() => {
+  closeImageViewer();
+});
+
+document.addEventListener("keydown",event => {
+  if(
+    event.key === "Escape" &&
+    imageViewer.classList.contains("active")
+  ){
+    closeImageViewer();
+  }
+});
+
+window.addEventListener("popstate",() => {
+  if(imageViewer.classList.contains("active")){
+    closeImageViewer(false);
+  }
+});
 
 function escapeHtml(value){
   return String(value ?? "")
@@ -935,13 +1160,13 @@ function createPopupHtml(report){
 
       ${initialImage
         ? `<strong>Foto segnalazione</strong>
-           <img src="${initialImage}" alt="Foto segnalazione">`
+           <img class="zoomable-report-image" src="${initialImage}" alt="Foto segnalazione" data-caption="Foto segnalazione">`
         : ""
       }
 
       ${resolvedImage
         ? `<strong>Foto risoluzione</strong>
-           <img src="${resolvedImage}" alt="Foto risoluzione">`
+           <img class="zoomable-report-image" src="${resolvedImage}" alt="Foto risoluzione" data-caption="Foto risoluzione">`
         : ""
       }
 
