@@ -1917,6 +1917,15 @@ async function findNearbyReports(lat, lng, category){
 
   snapshot.forEach(docSnap => {
     const data = docSnap.data();
+
+    if (
+      data.eliminataDaAdmin === true ||
+      data.visibilePubblico === false ||
+      data.archiviata === true
+    ) {
+      return;
+    }
+
     const reportLat = Number(data.lat);
     const reportLng = Number(data.lng);
 
@@ -2461,10 +2470,16 @@ async function loadReportsFromFirestore(){
     const q = query(collection(db, "segnalazioni"), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
 
-    const reports = snapshot.docs.map(docSnap => ({
-      id: docSnap.id,
-      ...docSnap.data()
-    }));
+    const reports = snapshot.docs
+      .map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }))
+      .filter(report =>
+        report.eliminataDaAdmin !== true &&
+        report.visibilePubblico !== false &&
+        report.archiviata !== true
+      );
 
     populateMunicipalitySearch(reports);
     populateCategoryFilter(reports);
@@ -2635,6 +2650,14 @@ async function loadMyReports(){
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
+
+      if (
+        data.eliminataDaAdmin === true ||
+        data.visibilePubblico === false ||
+        data.archiviata === true
+      ) {
+        return;
+      }
 
       if (data.ownerId === ownerId) {
         myReports.push({
