@@ -11,6 +11,16 @@
   href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
 >
 
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+>
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+>
+
 <style>
 *{
   box-sizing:border-box;
@@ -496,6 +506,7 @@ header{
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script type="module">
 
@@ -553,6 +564,7 @@ const showModerationBtn = document.getElementById("showModerationBtn");
 const showAllReportsBtn = document.getElementById("showAllReportsBtn");
 
 let adminMap = null;
+let markerClusterGroup = null;
 let mapMarkers = [];
 let reports = [];
 let moderationOnly = false;
@@ -982,9 +994,9 @@ function updateModerationAlert(){
 function renderMap(){
   updateModerationAlert();
 
-  mapMarkers.forEach(marker => {
-    adminMap.removeLayer(marker);
-  });
+  if(markerClusterGroup){
+    markerClusterGroup.clearLayers();
+  }
 
   mapMarkers = [];
 
@@ -1018,7 +1030,7 @@ function renderMap(){
           ? createResolvedIcon()
           : createOpenIcon(report.categoria)
       }
-    ).addTo(adminMap);
+    );
 
     marker.bindPopup(
       createPopupHtml(report),
@@ -1027,6 +1039,7 @@ function renderMap(){
       }
     );
 
+    markerClusterGroup.addLayer(marker);
     mapMarkers.push(marker);
     bounds.push([lat,lng]);
   });
@@ -1155,6 +1168,17 @@ function initMap(){
       attribution:"© OpenStreetMap"
     }
   ).addTo(adminMap);
+
+  markerClusterGroup = L.markerClusterGroup({
+    showCoverageOnHover:false,
+    spiderfyOnMaxZoom:true,
+    removeOutsideVisibleBounds:true,
+    animate:true,
+    maxClusterRadius:55,
+    disableClusteringAtZoom:17
+  });
+
+  adminMap.addLayer(markerClusterGroup);
 }
 
 provinceFilter.addEventListener("change",() => {
