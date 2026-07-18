@@ -667,7 +667,8 @@ import {
   orderBy,
   deleteDoc,
   updateDoc,
-  doc
+  doc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -1245,7 +1246,7 @@ function createPopupHtml(report){
           class="delete-btn"
           type="button"
           onclick="window.deleteAdminReport('${report.id}')">
-          Elimina definitivamente
+          ${isResolved ? "Rimuovi dalle mappe" : "Elimina definitivamente"}
         </button>
       </div>
     </div>
@@ -1371,10 +1372,12 @@ async function loadReports(){
 
     const snapshot = await getDocs(reportsQuery);
 
-    reports = snapshot.docs.map(docSnapshot => ({
-      id:docSnapshot.id,
-      ...docSnapshot.data()
-    }));
+    reports = snapshot.docs
+      .map(docSnapshot => ({
+        id:docSnapshot.id,
+        ...docSnapshot.data()
+      }))
+      .filter(report => report.eliminataDaAdmin !== true);
 
     rebuildFilters();
     renderMap();
@@ -1451,9 +1454,22 @@ window.approveAdminReport = async function(reportId){
 };
 
 window.deleteAdminReport = async function(reportId){
+  const report = reports.find(item => item.id === reportId);
+
+  if(!report){
+    alert("Segnalazione non trovata.");
+    return;
+  }
+
+  const status = String(report.stato || "aperta").toLowerCase();
+  const isResolved = status === "risolta" || status === "risolto";
+
   const confirmed = confirm(
-    "Vuoi eliminare definitivamente questa segnalazione?\n\n" +
-    "L'operazione cancella anche lo storico e non può essere annullata."
+    isResolved
+      ? "Vuoi rimuovere questa segnalazione risolta dalla mappa pubblica e dalla Dashboard Gestore?\n\n" +
+        "Resterà nello storico del Comune, che potrà conservarla, esportarla in Excel oppure rimuoverla dal proprio archivio."
+      : "Vuoi eliminare definitivamente questa segnalazione aperta?\n\n" +
+        "L'operazione non può essere annullata."
   );
 
   if(!confirmed){
@@ -1461,9 +1477,22 @@ window.deleteAdminReport = async function(reportId){
   }
 
   try{
-    await deleteDoc(
-      doc(db,"segnalazioni",reportId)
-    );
+    if(isResolved){
+      await updateDoc(
+        doc(db,"segnalazioni",reportId),
+        {
+          eliminataDaAdmin:true,
+          eliminataDaAdminAt:serverTimestamp(),
+          eliminataDaAdminUid:auth.currentUser?.uid || "",
+          visibilePubblico:false,
+          visibileAdmin:false
+        }
+      );
+    }else{
+      await deleteDoc(
+        doc(db,"segnalazioni",reportId)
+      );
+    }
 
     await loadReports();
 
