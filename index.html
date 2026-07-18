@@ -449,6 +449,73 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 .resolved-label{display:inline-block;background:#f9a825;color:#111;padding:4px 7px;border-radius:8px;font-weight:bold;margin-top:4px}
 .open-label{display:inline-block;background:#c62828;color:white;padding:4px 7px;border-radius:8px;font-weight:bold;margin-top:4px}
 
+.clickable-report-image{
+  cursor:zoom-in;
+  transition:opacity .2s ease,transform .2s ease;
+}
+
+.clickable-report-image:hover{
+  opacity:.9;
+  transform:scale(1.015);
+}
+
+#imageViewerOverlay{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:56px 18px 22px;
+  box-sizing:border-box;
+  background:rgba(0,0,0,.94);
+  z-index:10000;
+}
+
+#imageViewerOverlay.active{
+  display:flex;
+}
+
+#imageViewerImg{
+  display:block;
+  max-width:100%;
+  max-height:calc(100vh - 90px);
+  object-fit:contain;
+  border-radius:10px;
+  box-shadow:0 8px 30px rgba(0,0,0,.45);
+}
+
+#closeImageViewerBtn{
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:44px;
+  height:44px;
+  padding:0;
+  border-radius:50%;
+  background:rgba(255,255,255,.95);
+  color:#111;
+  font-size:30px;
+  line-height:44px;
+  font-weight:bold;
+  z-index:10001;
+}
+
+#imageViewerHint{
+  position:absolute;
+  bottom:8px;
+  left:12px;
+  right:12px;
+  margin:0;
+  color:rgba(255,255,255,.78);
+  font-size:12px;
+  text-align:center;
+  pointer-events:none;
+}
+
+body.image-viewer-open{
+  overflow:hidden;
+}
+
 #resolvePhotoOverlay{
   position:fixed;
   inset:0;
@@ -752,6 +819,12 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 
 </section>
 
+<div id="imageViewerOverlay" role="dialog" aria-modal="true" aria-label="Anteprima immagine ingrandita">
+  <button id="closeImageViewerBtn" type="button" aria-label="Chiudi immagine">×</button>
+  <img id="imageViewerImg" alt="Immagine ingrandita">
+  <p id="imageViewerHint">Tocca lo sfondo, premi × oppure usa il tasto Indietro</p>
+</div>
+
 <div id="resolvePhotoOverlay" role="dialog" aria-modal="true" aria-labelledby="resolvePhotoTitle">
   <div id="resolvePhotoBox">
     <h3 id="resolvePhotoTitle">Posizione verificata</h3>
@@ -880,6 +953,9 @@ const backFromHowItWorksBtn = document.getElementById("backFromHowItWorksBtn");
 const contactManagerBtn = document.getElementById("contactManagerBtn");
 const contactScreen = document.getElementById("contactScreen");
 const backFromContactBtn = document.getElementById("backFromContactBtn");
+const imageViewerOverlay = document.getElementById("imageViewerOverlay");
+const imageViewerImg = document.getElementById("imageViewerImg");
+const closeImageViewerBtn = document.getElementById("closeImageViewerBtn");
 const resolvePhotoOverlay = document.getElementById("resolvePhotoOverlay");
 const openResolveCameraBtn = document.getElementById("openResolveCameraBtn");
 const cancelResolveCameraBtn = document.getElementById("cancelResolveCameraBtn");
@@ -909,6 +985,7 @@ let reportsCache = {};
 let availableMunicipalities = [];
 let currentMunicipalityFilter = "Tutti";
 let currentCategoryFilter = "Tutte";
+let imageViewerHistoryActive = false;
 const MAX_RESOLVE_DISTANCE_METERS = 30;
 const MAX_REOPEN_DISTANCE_METERS = 15;
 const MAX_DUPLICATE_DISTANCE_METERS = 25;
@@ -934,6 +1011,75 @@ function showScreen(screen){
   screen.classList.add("active");
 
 }
+
+function openImageViewer(imageSrc, imageAlt = "Immagine ingrandita") {
+  if (!imageSrc) return;
+
+  imageViewerImg.src = imageSrc;
+  imageViewerImg.alt = imageAlt;
+  imageViewerOverlay.classList.add("active");
+  document.body.classList.add("image-viewer-open");
+
+  if (!imageViewerHistoryActive) {
+    history.pushState({ territorioLiveImageViewer: true }, "");
+    imageViewerHistoryActive = true;
+  }
+}
+
+function closeImageViewer({ useHistory = true } = {}) {
+  if (!imageViewerOverlay.classList.contains("active")) return;
+
+  imageViewerOverlay.classList.remove("active");
+  document.body.classList.remove("image-viewer-open");
+  imageViewerImg.removeAttribute("src");
+  imageViewerImg.alt = "Immagine ingrandita";
+
+  if (useHistory && imageViewerHistoryActive) {
+    imageViewerHistoryActive = false;
+    history.back();
+  } else {
+    imageViewerHistoryActive = false;
+  }
+}
+
+closeImageViewerBtn.addEventListener("click", () => {
+  closeImageViewer();
+});
+
+imageViewerOverlay.addEventListener("click", event => {
+  if (event.target === imageViewerOverlay) {
+    closeImageViewer();
+  }
+});
+
+document.addEventListener("click", event => {
+  const image = event.target.closest(".clickable-report-image");
+  if (!image) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  openImageViewer(image.src, image.alt || "Immagine ingrandita");
+});
+
+document.addEventListener("keydown", event => {
+  const focusedImage = event.target.closest && event.target.closest(".clickable-report-image");
+
+  if (focusedImage && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    openImageViewer(focusedImage.src, focusedImage.alt || "Immagine ingrandita");
+    return;
+  }
+
+  if (event.key === "Escape" && imageViewerOverlay.classList.contains("active")) {
+    closeImageViewer();
+  }
+});
+
+window.addEventListener("popstate", () => {
+  if (imageViewerOverlay.classList.contains("active")) {
+    closeImageViewer({ useHistory: false });
+  }
+});
 
 window.addEventListener("load", () => {
   setTimeout(() => {
@@ -2403,7 +2549,7 @@ async function loadReportsFromFirestore(){
           }
 
           ${data.immagineBase64
-            ? `<strong>Foto iniziale</strong><br><img class="popup-img" src="${data.immagineBase64}" alt="Foto segnalazione">`
+            ? `<strong>Foto iniziale</strong><br><img class="popup-img clickable-report-image" src="${data.immagineBase64}" alt="Foto segnalazione" tabindex="0" role="button" aria-label="Ingrandisci foto segnalazione">`
             : ""
           }
 
@@ -2413,7 +2559,7 @@ async function loadReportsFromFirestore(){
           }
 
           ${data.resolvedImageBase64
-            ? `<strong>Foto risoluzione</strong><br><img class="popup-img" src="${data.resolvedImageBase64}" alt="Foto risoluzione">`
+            ? `<strong>Foto risoluzione</strong><br><img class="popup-img clickable-report-image" src="${data.resolvedImageBase64}" alt="Foto risoluzione" tabindex="0" role="button" aria-label="Ingrandisci foto risoluzione">`
             : ""
           }
 
@@ -2557,13 +2703,13 @@ async function loadMyReports(){
           </div>
 
           ${report.immagineBase64
-            ? `<img src="${report.immagineBase64}" alt="Foto segnalazione">`
+            ? `<img class="clickable-report-image" src="${report.immagineBase64}" alt="Foto segnalazione" tabindex="0" role="button" aria-label="Ingrandisci foto segnalazione">`
             : ""
           }
 
           ${report.resolvedImageBase64
             ? `<p><strong>Foto della risoluzione</strong></p>
-               <img src="${report.resolvedImageBase64}" alt="Foto risoluzione">`
+               <img class="clickable-report-image" src="${report.resolvedImageBase64}" alt="Foto risoluzione" tabindex="0" role="button" aria-label="Ingrandisci foto risoluzione">`
             : ""
           }
 
