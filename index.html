@@ -13,6 +13,8 @@
 <meta name="apple-mobile-web-app-title" content="Territorio Live">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 
 <style>
 body{margin:0;font-family:Arial,Helvetica,sans-serif;height:100vh}
@@ -766,6 +768,7 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script type="module">
 import {
@@ -894,6 +897,7 @@ let selectedCategory = null;
 let map = null;
 let marker = null;
 let exploreMap = null;
+let exploreClusterGroup = null;
 let exploreMarkers = [];
 let userPositionMarker = null;
 let userPositionCircle = null;
@@ -1986,10 +1990,67 @@ function initExploreMap(){
       maxZoom: 19,
       attribution: "© OpenStreetMap"
     }).addTo(exploreMap);
+
+    exploreClusterGroup = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      spiderfyOnMaxZoom: true,
+      removeOutsideVisibleBounds: true,
+      animate: true,
+      maxClusterRadius: 55,
+      disableClusteringAtZoom: 17,
+
+      iconCreateFunction(cluster){
+        const childCount = cluster.getChildCount();
+
+        let backgroundColor = "#ffc107";
+        let clusterSize = 42;
+
+        if (childCount >= 20 && childCount < 100) {
+          backgroundColor = "#d32f2f";
+          clusterSize = 48;
+        } else if (childCount >= 100) {
+          backgroundColor = "#7b1fa2";
+          clusterSize = 56;
+        }
+
+        const textColor =
+          backgroundColor === "#ffc107"
+            ? "#111"
+            : "#fff";
+
+        return L.divIcon({
+          html: `
+            <div style="
+              width:${clusterSize}px;
+              height:${clusterSize}px;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              border-radius:50%;
+              background:${backgroundColor};
+              border:3px solid rgba(255,255,255,.92);
+              box-shadow:
+                0 0 0 6px ${backgroundColor}55,
+                0 3px 10px rgba(0,0,0,.4);
+              color:${textColor};
+              font-size:${childCount >= 100 ? "16px" : "14px"};
+              font-weight:bold;
+            ">
+              ${childCount}
+            </div>
+          `,
+          className: "",
+          iconSize: [clusterSize, clusterSize],
+          iconAnchor: [clusterSize / 2, clusterSize / 2]
+        });
+      }
+    });
+
+    exploreMap.addLayer(exploreClusterGroup);
   }
 
   exploreMap.invalidateSize();
-  
+
   startUserPositionTracking();
 }
 function createUserPositionIcon(){
@@ -2091,9 +2152,32 @@ function getCategoryEmoji(category){
   return icons[category] || "📍";
 }
 
+function getCategoryColor(category){
+  const colors = {
+    "Buca stradale": "#ffc107",
+    "Rifiuti / Discarica abusiva": "#d32f2f",
+    "Veicolo abbandonato": "#616161",
+    "Illuminazione pubblica guasta": "#ffeb3b",
+    "Segnaletica danneggiata": "#f57c00",
+    "Materiali pericolosi": "#7b1fa2",
+    "Perdita d'acqua": "#1976d2",
+    "Arredo urbano danneggiato": "#795548"
+  };
+
+  return colors[category] || "#c62828";
+}
+
 function createOpenIcon(category){
+  const markerColor = getCategoryColor(category);
+
   return L.divIcon({
-    html: `<div class="category-map-marker">${getCategoryEmoji(category)}</div>`,
+    html: `
+      <div
+        class="category-map-marker"
+        style="background:${markerColor}">
+        ${getCategoryEmoji(category)}
+      </div>
+    `,
     className: "",
     iconSize: [44, 44],
     iconAnchor: [22, 22],
@@ -2205,9 +2289,9 @@ function renderMunicipalitySuggestions(searchText){
 async function loadReportsFromFirestore(){
   if (!exploreMap) return;
 
-  exploreMarkers.forEach(markerItem => {
-    exploreMap.removeLayer(markerItem);
-  });
+  if (exploreClusterGroup) {
+    exploreClusterGroup.clearLayers();
+  }
 
   exploreMarkers = [];
   reportsCache = {};
@@ -2266,7 +2350,7 @@ async function loadReportsFromFirestore(){
       const markerItem = L.marker(
         [data.lat, data.lng],
         { icon: isResolved ? createResolvedIcon() : createOpenIcon(category) }
-      ).addTo(exploreMap);
+      );
 
       const popupHtml = `
         <div class="popup-box">
@@ -2353,6 +2437,11 @@ ${!isResolved && data.ownerId === ownerId
       `;
 
       markerItem.bindPopup(popupHtml);
+
+      if (exploreClusterGroup) {
+        exploreClusterGroup.addLayer(markerItem);
+      }
+
       exploreMarkers.push(markerItem);
     });
 
