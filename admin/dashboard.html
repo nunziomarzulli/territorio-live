@@ -689,9 +689,36 @@ function getCategoryEmoji(category){
   return icons[category] || "📍";
 }
 
+function getCategoryColor(category){
+  const colors = {
+    "Buca stradale":"#d32f2f",
+    "Rifiuti / Discarica abusiva":"#2e7d32",
+    "Veicolo abbandonato":"#616161",
+    "Illuminazione pubblica guasta":"#fbc02d",
+    "Segnaletica danneggiata":"#f57c00",
+    "Materiali pericolosi":"#7b1fa2",
+    "Perdita d'acqua":"#1976d2",
+    "Arredo urbano danneggiato":"#795548",
+    "Discarica a cielo aperto":"#388e3c",
+    "Sversamento sospetto":"#0288d1",
+    "Albero o ramo pericolante":"#1b5e20",
+    "Incendio":"#b71c1c"
+  };
+
+  return colors[category] || "#c62828";
+}
+
 function createOpenIcon(category){
+  const markerColor = getCategoryColor(category);
+
   return L.divIcon({
-    html:`<div class="category-marker">${getCategoryEmoji(category)}</div>`,
+    html:`
+      <div
+        class="category-marker"
+        style="background:${markerColor}">
+        ${getCategoryEmoji(category)}
+      </div>
+    `,
     className:"",
     iconSize:[44,44],
     iconAnchor:[22,22],
