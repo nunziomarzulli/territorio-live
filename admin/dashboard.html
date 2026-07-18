@@ -593,6 +593,71 @@ function formatDate(timestamp){
   }
 }
 
+function timestampToDate(timestamp){
+  if(!timestamp){
+    return null;
+  }
+
+  try{
+    const date =
+      typeof timestamp.toDate === "function"
+        ? timestamp.toDate()
+        : new Date(timestamp);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }catch(error){
+    return null;
+  }
+}
+
+function getResolutionTimestamp(report){
+  return (
+    report.resolvedAt ||
+    report.risoltaAt ||
+    report.dataRisoluzione ||
+    report.resolvedDate ||
+    report.updatedAt ||
+    null
+  );
+}
+
+function isResolvedWithinLastDays(report, days){
+  const resolutionDate = timestampToDate(getResolutionTimestamp(report));
+
+  if(!resolutionDate){
+    return false;
+  }
+
+  const elapsedMilliseconds = Date.now() - resolutionDate.getTime();
+  const maximumMilliseconds = days * 24 * 60 * 60 * 1000;
+
+  return elapsedMilliseconds >= 0 && elapsedMilliseconds <= maximumMilliseconds;
+}
+
+function getResolutionDurationText(report){
+  const createdDate = timestampToDate(report.createdAt);
+  const resolutionDate = timestampToDate(getResolutionTimestamp(report));
+
+  if(!createdDate || !resolutionDate){
+    return "-";
+  }
+
+  const elapsedMilliseconds = resolutionDate.getTime() - createdDate.getTime();
+
+  if(elapsedMilliseconds < 0){
+    return "-";
+  }
+
+  const totalHours = Math.round(elapsedMilliseconds / (60 * 60 * 1000));
+
+  if(totalHours < 24){
+    return totalHours === 1 ? "1 ora" : `${totalHours} ore`;
+  }
+
+  const totalDays = Math.round(totalHours / 24);
+  return totalDays === 1 ? "1 giorno" : `${totalDays} giorni`;
+}
+
 function getCategoryEmoji(category){
   const icons = {
     "Buca stradale":"🕳️",
@@ -739,12 +804,16 @@ function getFilteredReports(){
       return false;
     }
 
-    if(selectedStatus === "Aperte" && isResolved){
-      return false;
+    if(selectedStatus === "Aperte"){
+      return !isResolved;
     }
 
-    if(selectedStatus === "Risolte" && !isResolved){
-      return false;
+    if(selectedStatus === "Risolte"){
+      return isResolved;
+    }
+
+    if(selectedStatus === "Tutte" && isResolved){
+      return isResolvedWithinLastDays(report,7);
     }
 
     return true;
@@ -791,9 +860,22 @@ function createPopupHtml(report){
       </div>
 
       <div class="popup-row">
-        <strong>Data:</strong>
+        <strong>Segnalata:</strong>
         ${formatDate(report.createdAt)}
       </div>
+
+      ${isResolved
+        ? `<div class="popup-row">
+             <strong>Risolta:</strong>
+             ${formatDate(getResolutionTimestamp(report))}
+           </div>
+
+           <div class="popup-row">
+             <strong>Tempo di risoluzione:</strong>
+             ${escapeHtml(getResolutionDurationText(report))}
+           </div>`
+        : ""
+      }
 
       <div class="popup-row">
         <strong>Conferme:</strong>
