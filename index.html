@@ -906,6 +906,7 @@ let currentMunicipalityFilter = "Tutti";
 let currentCategoryFilter = "Tutte";
 const MAX_RESOLVE_DISTANCE_METERS = 30;
 const MAX_REOPEN_DISTANCE_METERS = 15;
+const MAX_DUPLICATE_DISTANCE_METERS = 25;
   
 let ownerId = localStorage.getItem("territorioLiveOwnerId");
 
@@ -1744,6 +1745,50 @@ async function reverseGeocode(lat, lng){
   }
 }
 
+async function findNearbyOpenReport(lat, lng, category){
+  const snapshot = await getDocs(
+    collection(db, "segnalazioni")
+  );
+
+  let nearestReport = null;
+  let nearestDistance = Infinity;
+
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+
+    if ((data.stato || "aperta") === "risolta") return;
+    if ((data.categoria || "") !== category) return;
+
+    const reportLat = Number(data.lat);
+    const reportLng = Number(data.lng);
+
+    if (!Number.isFinite(reportLat) || !Number.isFinite(reportLng)) {
+      return;
+    }
+
+    const distance = calculateDistanceMeters(
+      lat,
+      lng,
+      reportLat,
+      reportLng
+    );
+
+    if (
+      distance <= MAX_DUPLICATE_DISTANCE_METERS &&
+      distance < nearestDistance
+    ) {
+      nearestDistance = distance;
+      nearestReport = {
+        id: docSnap.id,
+        data,
+        distance
+      };
+    }
+  });
+
+  return nearestReport;
+}
+
 async function findNearbyResolvedReport(lat, lng, category){
   const snapshot = await getDocs(
     collection(db, "segnalazioni")
@@ -1816,6 +1861,32 @@ sendBtn.onclick = async () => {
     const locationData = await reverseGeocode(currentLat, currentLng);
 
     sendBtn.textContent = "Controllo segnalazioni vicine...";
+
+    const nearbyOpenReport = await findNearbyOpenReport(
+      currentLat,
+      currentLng,
+      selectedCategory
+    );
+
+    if (nearbyOpenReport) {
+      const distanceText = Math.max(
+        1,
+        Math.round(nearbyOpenReport.distance)
+      );
+
+      const sendAnyway = confirm(
+        "Attenzione: esiste già una segnalazione aperta della stessa categoria " +
+        "a circa " + distanceText + " metri da questo punto.\n\n" +
+        "Potrebbe trattarsi dello stesso problema.\n\n" +
+        "Premi OK per inviare comunque una nuova segnalazione, oppure Annulla per interrompere."
+      );
+
+      if (!sendAnyway) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Invia segnalazione";
+        return;
+      }
+    }
 
     const nearbyResolvedReport = await findNearbyResolvedReport(
       currentLat,
