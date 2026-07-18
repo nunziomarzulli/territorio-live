@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Comune di Adelfia - Territorio Live</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;font-family:Arial,Helvetica,sans-serif;background:#eef2f5;color:#17202a}
@@ -74,8 +76,34 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
 .notice{padding:11px;border-radius:9px;background:#fff3cd;color:#674d03;font-size:12px;line-height:1.45}
 .empty{padding:30px 18px;text-align:center;color:#6d7883}
 
-.marker{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);font-size:19px;background:#d62828}
-.marker.work{background:#ef7c00}.marker.resolved{background:#198754}
+.marker{
+  width:40px;
+  height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  border:3px solid #fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);
+  font-size:20px;
+  position:relative;
+}
+.marker.work::after{
+  content:"";
+  position:absolute;
+  right:-3px;
+  bottom:-3px;
+  width:13px;
+  height:13px;
+  border-radius:50%;
+  background:#ef7c00;
+  border:2px solid #fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.35);
+}
+.marker.resolved{
+  background:#198754;
+  color:#fff;
+}
 
 @media(max-width:980px){
   main{grid-template-columns:1.7fr 1fr}
@@ -133,9 +161,9 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
       <div id="mapStats" class="map-stats">Caricamento...</div>
 
       <div class="legend">
-        🔴 Aperta<br>
-        🟠 In lavorazione<br>
-        🟢 Risolta
+        📍 Colore = categoria<br>
+        🟠 Pallino = in lavorazione<br>
+        ⭐ Risolta
       </div>
     </section>
 
@@ -234,6 +262,7 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
 </section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import {
@@ -296,6 +325,7 @@ const saveDraftBtn = document.getElementById("saveDraftBtn");
 const resolveBtn = document.getElementById("resolveBtn");
 
 let map = null;
+let markerClusterGroup = null;
 let markers = [];
 let reports = [];
 let currentProfile = null;
@@ -376,26 +406,113 @@ function categoryEmoji(category){
   return icons[category] || "📍";
 }
 
+function categoryColor(category){
+  const colors = {
+    "Buca stradale":"#ffc107",
+    "Rifiuti / Discarica abusiva":"#d32f2f",
+    "Veicolo abbandonato":"#616161",
+    "Illuminazione pubblica guasta":"#ffeb3b",
+    "Segnaletica danneggiata":"#f57c00",
+    "Materiali pericolosi":"#7b1fa2",
+    "Perdita d'acqua":"#1976d2",
+    "Arredo urbano danneggiato":"#795548"
+  };
+
+  return colors[category] || "#c62828";
+}
+
 function markerIcon(report){
   const status = normalizeStatus(report);
-  const className = status === "risolta" ? "resolved" : status === "in_lavorazione" ? "work" : "";
-  const emoji = status === "risolta" ? "⭐" : categoryEmoji(report.categoria);
+
+  if(status === "risolta"){
+    return L.divIcon({
+      html:`<div class="marker resolved">⭐</div>`,
+      className:"",
+      iconSize:[44,44],
+      iconAnchor:[22,22],
+      popupAnchor:[0,-20]
+    });
+  }
+
+  const workClass = status === "in_lavorazione" ? "work" : "";
+  const color = categoryColor(report.categoria);
+
   return L.divIcon({
-    html:`<div class="marker ${className}">${emoji}</div>`,
+    html:`
+      <div class="marker ${workClass}" style="background:${color}">
+        ${categoryEmoji(report.categoria)}
+      </div>
+    `,
     className:"",
-    iconSize:[40,40],
-    iconAnchor:[20,20],
-    popupAnchor:[0,-18]
+    iconSize:[44,44],
+    iconAnchor:[22,22],
+    popupAnchor:[0,-20]
   });
 }
 
 function initMap(){
   if(map) return;
+
   map = L.map("municipalityMap").setView([41.1171,16.8719],13);
+
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
     maxZoom:19,
     attribution:"© OpenStreetMap"
   }).addTo(map);
+
+  markerClusterGroup = L.markerClusterGroup({
+    showCoverageOnHover:false,
+    spiderfyOnMaxZoom:true,
+    removeOutsideVisibleBounds:true,
+    animate:true,
+    maxClusterRadius:55,
+    disableClusteringAtZoom:17,
+
+    iconCreateFunction(cluster){
+      const count = cluster.getChildCount();
+
+      let backgroundColor = "#ffc107";
+      let size = 42;
+
+      if(count >= 20 && count < 100){
+        backgroundColor = "#d32f2f";
+        size = 48;
+      }else if(count >= 100){
+        backgroundColor = "#7b1fa2";
+        size = 56;
+      }
+
+      const textColor = backgroundColor === "#ffc107" ? "#111" : "#fff";
+
+      return L.divIcon({
+        html:`
+          <div style="
+            width:${size}px;
+            height:${size}px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border-radius:50%;
+            background:${backgroundColor};
+            border:3px solid rgba(255,255,255,.94);
+            box-shadow:
+              0 0 0 6px ${backgroundColor}55,
+              0 3px 10px rgba(0,0,0,.4);
+            color:${textColor};
+            font-size:${count >= 100 ? "16px" : "14px"};
+            font-weight:bold;
+          ">
+            ${count}
+          </div>
+        `,
+        className:"",
+        iconSize:[size,size],
+        iconAnchor:[size / 2,size / 2]
+      });
+    }
+  });
+
+  map.addLayer(markerClusterGroup);
 }
 
 function uniqueCategories(){
@@ -419,7 +536,9 @@ function rebuildCategories(){
 }
 
 function renderMap(){
-  markers.forEach(marker => map.removeLayer(marker));
+  if(markerClusterGroup){
+    markerClusterGroup.clearLayers();
+  }
   markers = [];
 
   const category = categoryFilter.value;
@@ -433,7 +552,7 @@ function renderMap(){
   });
 
   visible.forEach(report => {
-    const marker = L.marker([Number(report.lat),Number(report.lng)],{icon:markerIcon(report)}).addTo(map);
+    const marker = L.marker([Number(report.lat),Number(report.lng)],{icon:markerIcon(report)});
     marker.bindPopup(`
       <strong>${escapeHtml(report.categoria || "Segnalazione")}</strong><br>
       ${escapeHtml(report.indirizzo || "")}<br>
@@ -441,6 +560,11 @@ function renderMap(){
         Gestisci
       </button>
     `);
+    
+    if(markerClusterGroup){
+      markerClusterGroup.addLayer(marker);
+    }
+
     markers.push(marker);
     bounds.push([Number(report.lat),Number(report.lng)]);
   });
