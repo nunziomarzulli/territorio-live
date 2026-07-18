@@ -887,7 +887,6 @@ async function saveIntervention(forceResolved){
   resolveBtn.disabled = true;
 
   let executorName = executorNameInput.value.trim();
-  if(executorTypeInput.value === "comune") executorName = currentProfile.comune;
   if(executorTypeInput.value === "non_noto") executorName = "Non noto";
 
   if(newStatus === "risolta" && !executorName){
