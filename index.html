@@ -785,7 +785,8 @@ import {
   doc,
   updateDoc,
   increment,
-  arrayUnion
+  arrayUnion,
+  where
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 let faceDetector = null;
@@ -1345,8 +1346,8 @@ continueBtn.onclick = async () => {
 
 function getAccuratePosition() {
   return new Promise((resolve, reject) => {
-    const MAX_WAIT_TIME = 20000;
-    const DESIRED_ACCURACY = 25;
+    const MAX_WAIT_TIME = 12000;
+    const DESIRED_ACCURACY = 35;
 
     let bestPosition = null;
     let watchId = null;
@@ -1745,20 +1746,21 @@ async function reverseGeocode(lat, lng){
   }
 }
 
-async function findNearbyOpenReport(lat, lng, category){
-  const snapshot = await getDocs(
-    collection(db, "segnalazioni")
+async function findNearbyReports(lat, lng, category){
+  const categoryQuery = query(
+    collection(db, "segnalazioni"),
+    where("categoria", "==", category)
   );
 
-  let nearestReport = null;
-  let nearestDistance = Infinity;
+  const snapshot = await getDocs(categoryQuery);
+
+  let nearestOpenReport = null;
+  let nearestOpenDistance = Infinity;
+  let nearestResolvedReport = null;
+  let nearestResolvedDistance = Infinity;
 
   snapshot.forEach(docSnap => {
     const data = docSnap.data();
-
-    if ((data.stato || "aperta") === "risolta") return;
-    if ((data.categoria || "") !== category) return;
-
     const reportLat = Number(data.lat);
     const reportLng = Number(data.lng);
 
@@ -1773,56 +1775,28 @@ async function findNearbyOpenReport(lat, lng, category){
       reportLng
     );
 
+    const isResolved = (data.stato || "aperta") === "risolta";
+
     if (
+      !isResolved &&
       distance <= MAX_DUPLICATE_DISTANCE_METERS &&
-      distance < nearestDistance
+      distance < nearestOpenDistance
     ) {
-      nearestDistance = distance;
-      nearestReport = {
+      nearestOpenDistance = distance;
+      nearestOpenReport = {
         id: docSnap.id,
         data,
         distance
       };
     }
-  });
-
-  return nearestReport;
-}
-
-async function findNearbyResolvedReport(lat, lng, category){
-  const snapshot = await getDocs(
-    collection(db, "segnalazioni")
-  );
-
-  let nearestReport = null;
-  let nearestDistance = Infinity;
-
-  snapshot.forEach(docSnap => {
-    const data = docSnap.data();
-
-    if ((data.stato || "") !== "risolta") return;
-    if ((data.categoria || "") !== category) return;
-
-    const reportLat = Number(data.lat);
-    const reportLng = Number(data.lng);
-
-    if (!Number.isFinite(reportLat) || !Number.isFinite(reportLng)) {
-      return;
-    }
-
-    const distance = calculateDistanceMeters(
-      lat,
-      lng,
-      reportLat,
-      reportLng
-    );
 
     if (
+      isResolved &&
       distance <= MAX_REOPEN_DISTANCE_METERS &&
-      distance < nearestDistance
+      distance < nearestResolvedDistance
     ) {
-      nearestDistance = distance;
-      nearestReport = {
+      nearestResolvedDistance = distance;
+      nearestResolvedReport = {
         id: docSnap.id,
         data,
         distance
@@ -1830,7 +1804,10 @@ async function findNearbyResolvedReport(lat, lng, category){
     }
   });
 
-  return nearestReport;
+  return {
+    open: nearestOpenReport,
+    resolved: nearestResolvedReport
+  };
 }
 
 sendBtn.onclick = async () => {
@@ -1853,20 +1830,15 @@ sendBtn.onclick = async () => {
   sendBtn.textContent = "Controllo qualità foto...";
 
   try {
-    const moderationResult =
-      await analyzePhotoForModeration(compressedPhoto);
+    sendBtn.textContent = "Controlli rapidi in corso...";
 
-    sendBtn.textContent = "Rilevamento indirizzo...";
+    const [moderationResult, locationData, nearbyReports] = await Promise.all([
+      analyzePhotoForModeration(compressedPhoto),
+      reverseGeocode(currentLat, currentLng),
+      findNearbyReports(currentLat, currentLng, selectedCategory)
+    ]);
 
-    const locationData = await reverseGeocode(currentLat, currentLng);
-
-    sendBtn.textContent = "Controllo segnalazioni vicine...";
-
-    const nearbyOpenReport = await findNearbyOpenReport(
-      currentLat,
-      currentLng,
-      selectedCategory
-    );
+    const nearbyOpenReport = nearbyReports.open;
 
     if (nearbyOpenReport) {
       const distanceText = Math.max(
@@ -1888,11 +1860,7 @@ sendBtn.onclick = async () => {
       }
     }
 
-    const nearbyResolvedReport = await findNearbyResolvedReport(
-      currentLat,
-      currentLng,
-      selectedCategory
-    );
+    const nearbyResolvedReport = nearbyReports.resolved;
 
     if (nearbyResolvedReport) {
       const previousReport = nearbyResolvedReport.data;
