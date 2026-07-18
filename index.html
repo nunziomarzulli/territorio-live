@@ -1394,6 +1394,12 @@ resolveCamera.onchange = async () => {
       resolvedAt: serverTimestamp(),
       resolvedImageBase64: resolvedImageBase64,
       resolvedBy: ownerId,
+      risoluzioneSegnalataDa: "Cittadino",
+      risoluzioneSegnalataDaTipo: "cittadino",
+      interventoEseguitoDa: "Non noto",
+      interventoEseguitoDaTipo: "non_noto",
+      interventoEseguitoDaAggiornatoAt: serverTimestamp(),
+      interventoEseguitoDaAggiornatoDa: "cittadino",
       risoluzioniTotali: increment(1)
     });
 
@@ -2060,6 +2066,12 @@ sendBtn.onclick = async () => {
             resolvedAt: null,
             resolvedImageBase64: "",
             resolvedBy: "",
+            risoluzioneSegnalataDa: "",
+            risoluzioneSegnalataDaTipo: "",
+            interventoEseguitoDa: "",
+            interventoEseguitoDaTipo: "",
+            interventoEseguitoDaAggiornatoAt: null,
+            interventoEseguitoDaAggiornatoDa: "",
             spamScore: moderationResult.spamScore,
             moderazioneStato: moderationResult.moderazioneStato,
             moderazioneMotivo: moderationResult.moderazioneMotivo,
@@ -2554,7 +2566,9 @@ async function loadReportsFromFirestore(){
           }
 
           ${isResolved
-            ? `<br><strong>Data risoluzione:</strong> ${resolvedDateText}<br>`
+            ? `<br><strong>Data risoluzione:</strong> ${resolvedDateText}<br>
+               <strong>Risoluzione segnalata da:</strong> ${escapeHtml(data.risoluzioneSegnalataDa || "Cittadino")}<br>
+               <strong>Intervento eseguito da:</strong> ${escapeHtml(data.interventoEseguitoDa || data.risoltoDa || "Non noto")}<br>`
             : ""
           }
 
@@ -2670,7 +2684,9 @@ async function loadMyReports(){
               : ""
             }
             ${isResolved
-              ? `<br><strong>Risolta il:</strong> ${resolvedDate}`
+              ? `<br><strong>Risolta il:</strong> ${resolvedDate}
+                 <br><strong>Risoluzione segnalata da:</strong> ${escapeHtml(report.risoluzioneSegnalataDa || "Cittadino")}
+                 <br><strong>Intervento eseguito da:</strong> ${escapeHtml(report.interventoEseguitoDa || report.risoltoDa || "Non noto")}`
               : ""
             }
           </p>
