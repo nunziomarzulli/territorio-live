@@ -225,6 +225,23 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
     </div>
 
     <div class="form-group">
+      <label for="executorTypeInput">Intervento eseguito da</label>
+      <select id="executorTypeInput">
+        <option value="non_noto">Non noto</option>
+        <option value="comune">Comune</option>
+        <option value="ditta">Ditta incaricata</option>
+        <option value="associazione">Associazione</option>
+        <option value="cittadino">Cittadino / privato</option>
+        <option value="altro">Altro soggetto</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="executorNameInput">Nome del soggetto che ha eseguito l’intervento</label>
+      <input id="executorNameInput" type="text" placeholder="Es. Comune di Adelfia, nome ditta o associazione">
+    </div>
+
+    <div class="form-group">
       <label for="priorityInput">Priorità assegnata dal Comune</label>
       <select id="priorityInput">
         <option value="">Automatica in base ai giorni</option>
@@ -329,6 +346,8 @@ const detailSummary = document.getElementById("detailSummary");
 const detailTimeline = document.getElementById("detailTimeline");
 const closeDetailsBtn = document.getElementById("closeDetailsBtn");
 const statusInput = document.getElementById("statusInput");
+const executorTypeInput = document.getElementById("executorTypeInput");
+const executorNameInput = document.getElementById("executorNameInput");
 const priorityInput = document.getElementById("priorityInput");
 const dateInput = document.getElementById("dateInput");
 const costInput = document.getElementById("costInput");
@@ -773,7 +792,8 @@ function openReport(reportId){
       <strong>Comune:</strong> ${escapeHtml(report.comune || "-")}<br>
       <strong>Stato:</strong> ${escapeHtml(normalizeStatus(report))}<br>
       <strong>Priorità automatica:</strong> ${escapeHtml(automaticPriority(report))}<br>
-      <strong>Conferme:</strong> ${Number(report.conferme || 0)}
+      <strong>Conferme:</strong> ${Number(report.conferme || 0)}<br>
+      ${normalizeStatus(report) === "risolta" ? `<strong>Risoluzione segnalata da:</strong> ${escapeHtml(report.risoluzioneSegnalataDa || "Non disponibile")}<br><strong>Intervento eseguito da:</strong> ${escapeHtml(report.interventoEseguitoDa || report.risoltoDa || "Non noto")}` : ""}
       ${report.immagineBase64 ? `<img class="detail-photo" src="${report.immagineBase64}" alt="Foto segnalazione">` : ""}
     </div>
   `;
@@ -781,6 +801,11 @@ function openReport(reportId){
   renderTimeline(report);
 
   statusInput.value = normalizeStatus(report);
+  executorTypeInput.value = String(report.interventoEseguitoDaTipo || (report.risoltoDa ? "comune" : "non_noto"));
+  executorNameInput.value = String(report.interventoEseguitoDa || report.risoltoDa || "");
+  if(executorTypeInput.value === "comune" && !executorNameInput.value){
+    executorNameInput.value = currentProfile.comune;
+  }
   priorityInput.value = String(report.prioritaComune || "");
   dateInput.value = String(report.dataIntervento || "");
   costInput.value = report.costoIntervento ?? "";
@@ -827,6 +852,16 @@ async function compressImage(file){
   });
 }
 
+executorTypeInput.addEventListener("change",() => {
+  if(executorTypeInput.value === "comune"){
+    executorNameInput.value = currentProfile?.comune || "";
+  }else if(executorTypeInput.value === "non_noto"){
+    executorNameInput.value = "Non noto";
+  }else if(executorNameInput.value === "Non noto" || executorNameInput.value === currentProfile?.comune){
+    executorNameInput.value = "";
+  }
+});
+
 photoInput.addEventListener("change",async () => {
   const file = photoInput.files?.[0];
   if(!file) return;
@@ -859,8 +894,23 @@ async function saveIntervention(forceResolved){
   saveDraftBtn.disabled = true;
   resolveBtn.disabled = true;
 
+  let executorName = executorNameInput.value.trim();
+  if(executorTypeInput.value === "comune") executorName = currentProfile.comune;
+  if(executorTypeInput.value === "non_noto") executorName = "Non noto";
+
+  if(newStatus === "risolta" && !executorName){
+    alert("Indica chi ha eseguito l’intervento oppure seleziona Non noto.");
+    saveDraftBtn.disabled = false;
+    resolveBtn.disabled = false;
+    return;
+  }
+
   const data = {
     stato:newStatus,
+    interventoEseguitoDa:executorName,
+    interventoEseguitoDaTipo:executorTypeInput.value,
+    interventoEseguitoDaAggiornatoAt:serverTimestamp(),
+    interventoEseguitoDaAggiornatoDa:`comune:${currentProfile.comune}`,
     prioritaComune:priorityInput.value || "",
     dataIntervento:dateInput.value || "",
     dittaIntervento:companyInput.value.trim(),
@@ -910,8 +960,12 @@ async function saveIntervention(forceResolved){
   }
 
   if(newStatus === "risolta"){
-    data.resolvedAt = serverTimestamp();
-    data.risoltoDa = currentProfile.comune;
+    if(previousStatus !== "risolta") data.resolvedAt = serverTimestamp();
+    data.risoltoDa = executorName;
+    if(!selectedReport.risoluzioneSegnalataDa){
+      data.risoluzioneSegnalataDa = `Comune di ${currentProfile.comune}`;
+      data.risoluzioneSegnalataDaTipo = "comune";
+    }
   }
 
   try{
