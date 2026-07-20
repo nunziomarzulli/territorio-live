@@ -165,7 +165,10 @@
 <body>
 
     <main class="box">
-        <h1 class="logo">Territorio Live</h1>
+
+        <h1 class="logo">
+            Territorio Live
+        </h1>
 
         <div class="area-title">
             Area riservata Comune
@@ -205,6 +208,7 @@
             <button id="loginBtn" type="submit">
                 Accedi
             </button>
+
         </form>
 
         <a
@@ -216,15 +220,20 @@
             Password dimenticata?
         </a>
 
-        <div id="message" aria-live="polite"></div>
+        <div
+            id="message"
+            aria-live="polite"
+        ></div>
 
         <div class="footer">
             L’accesso è consentito esclusivamente ai profili
             comunali autorizzati dal gestore di Territorio Live.
         </div>
+
     </main>
 
     <script type="module">
+
         import {
             initializeApp
         } from
@@ -241,8 +250,11 @@
 
         import {
             getFirestore,
-            doc,
-            getDoc
+            collection,
+            query,
+            where,
+            limit,
+            getDocs
         } from
         "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
@@ -260,15 +272,25 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        const loginForm = document.getElementById("loginForm");
-        const emailInput = document.getElementById("email");
-        const passwordInput = document.getElementById("password");
-        const loginBtn = document.getElementById("loginBtn");
-        const messageBox = document.getElementById("message");
+        const loginForm =
+            document.getElementById("loginForm");
+
+        const emailInput =
+            document.getElementById("email");
+
+        const passwordInput =
+            document.getElementById("password");
+
+        const loginBtn =
+            document.getElementById("loginBtn");
+
+        const messageBox =
+            document.getElementById("message");
+
         const resetPasswordLink =
             document.getElementById("resetPasswordLink");
 
-        let controlloAutomaticoEseguito = false;
+        let verificaAutomaticaInCorso = false;
 
         function mostraMessaggio(testo, tipo = "error") {
             messageBox.textContent = testo;
@@ -288,30 +310,61 @@
                 : "Accedi";
         }
 
-        async function controllaProfiloComune(user) {
-            const profiloRef = doc(
+        async function cercaProfiloComune(uidUtente) {
+
+            const profiliRef = collection(
                 db,
-                "utentiComuni",
-                user.uid
+                "utentiComuni"
             );
 
-            const profiloSnapshot = await getDoc(profiloRef);
+            const ricercaProfilo = query(
+                profiliRef,
+                where("uid", "==", uidUtente),
+                limit(1)
+            );
 
-            if (!profiloSnapshot.exists()) {
+            const risultato =
+                await getDocs(ricercaProfilo);
+
+            if (risultato.empty) {
+                return null;
+            }
+
+            const documento =
+                risultato.docs[0];
+
+            return {
+                idComune: documento.id,
+                ...documento.data()
+            };
+        }
+
+        async function verificaProfiloComune(user) {
+
+            const profilo =
+                await cercaProfiloComune(user.uid);
+
+            if (!profilo) {
                 await signOut(auth);
 
+                sessionStorage.removeItem(
+                    "territorioLiveComune"
+                );
+
                 mostraMessaggio(
-                    "Questo account non è associato a un profilo Comune autorizzato.",
+                    "Questo account non è associato a un Comune autorizzato.",
                     "error"
                 );
 
                 return false;
             }
 
-            const profilo = profiloSnapshot.data();
-
             if (profilo.ruolo !== "comune") {
                 await signOut(auth);
+
+                sessionStorage.removeItem(
+                    "territorioLiveComune"
+                );
 
                 mostraMessaggio(
                     "Questo account non dispone dell’autorizzazione per accedere all’area Comune.",
@@ -324,8 +377,12 @@
             if (profilo.stato === "in_attesa") {
                 await signOut(auth);
 
+                sessionStorage.removeItem(
+                    "territorioLiveComune"
+                );
+
                 mostraMessaggio(
-                    "La registrazione è stata ricevuta ed è in attesa di approvazione.",
+                    "Il profilo è in attesa di approvazione.",
                     "info"
                 );
 
@@ -335,8 +392,12 @@
             if (profilo.stato === "disattivato") {
                 await signOut(auth);
 
+                sessionStorage.removeItem(
+                    "territorioLiveComune"
+                );
+
                 mostraMessaggio(
-                    "Il profilo del Comune è stato disattivato. Contatta il gestore di Territorio Live.",
+                    "Il profilo è stato disattivato. Contatta il gestore di Territorio Live.",
                     "error"
                 );
 
@@ -346,8 +407,12 @@
             if (profilo.stato !== "attivo") {
                 await signOut(auth);
 
+                sessionStorage.removeItem(
+                    "territorioLiveComune"
+                );
+
                 mostraMessaggio(
-                    "Il profilo non è ancora abilitato all’accesso.",
+                    "Il profilo non è ancora abilitato.",
                     "info"
                 );
 
@@ -356,6 +421,10 @@
 
             if (!profilo.comune) {
                 await signOut(auth);
+
+                sessionStorage.removeItem(
+                    "territorioLiveComune"
+                );
 
                 mostraMessaggio(
                     "Al profilo non risulta associato alcun Comune.",
@@ -369,7 +438,8 @@
                 "territorioLiveComune",
                 JSON.stringify({
                     uid: user.uid,
-                    email: user.email,
+                    email: user.email || "",
+                    idComune: profilo.idComune,
                     comune: profilo.comune,
                     provincia: profilo.provincia || "",
                     ruolo: profilo.ruolo,
@@ -377,58 +447,91 @@
                 })
             );
 
-            window.location.replace("./dashboard.html");
+            window.location.replace(
+                "./dashboard.html"
+            );
 
             return true;
         }
 
-        onAuthStateChanged(auth, async (user) => {
-            if (controlloAutomaticoEseguito) {
-                return;
+        onAuthStateChanged(
+            auth,
+            async (user) => {
+
+                if (verificaAutomaticaInCorso) {
+                    return;
+                }
+
+                if (!user) {
+                    return;
+                }
+
+                verificaAutomaticaInCorso = true;
+                impostaCaricamento(true);
+
+                try {
+
+                    await verificaProfiloComune(user);
+
+                } catch (error) {
+
+                    console.error(
+                        "Errore verifica profilo Comune:",
+                        error.code,
+                        error.message
+                    );
+
+                    await signOut(auth);
+
+                    sessionStorage.removeItem(
+                        "territorioLiveComune"
+                    );
+
+                    if (
+                        error.code ===
+                        "permission-denied" ||
+                        error.code ===
+                        "firestore/permission-denied"
+                    ) {
+                        mostraMessaggio(
+                            "Le regole di sicurezza non consentono ancora la verifica del profilo.",
+                            "error"
+                        );
+                    } else {
+                        mostraMessaggio(
+                            "Non è stato possibile verificare il profilo. Riprova.",
+                            "error"
+                        );
+                    }
+
+                    impostaCaricamento(false);
+
+                } finally {
+
+                    verificaAutomaticaInCorso = false;
+                }
             }
-
-            controlloAutomaticoEseguito = true;
-
-            if (!user) {
-                return;
-            }
-
-            impostaCaricamento(true);
-
-            try {
-                await controllaProfiloComune(user);
-            } catch (error) {
-                console.error(
-                    "Errore controllo profilo Comune:",
-                    error
-                );
-
-                await signOut(auth);
-
-                mostraMessaggio(
-                    "Non è stato possibile verificare il profilo. Riprova.",
-                    "error"
-                );
-
-                impostaCaricamento(false);
-            }
-        });
+        );
 
         loginForm.addEventListener(
             "submit",
             async (event) => {
+
                 event.preventDefault();
 
                 pulisciMessaggio();
                 impostaCaricamento(true);
 
-                const email = emailInput.value
-                    .trim()
-                    .toLowerCase();
+                const email =
+                    emailInput.value
+                        .trim()
+                        .toLowerCase();
 
-                const password = passwordInput.value;
+                const password =
+                    passwordInput.value;
 
                 try {
+
                     const credenziali =
                         await signInWithEmailAndPassword(
                             auth,
@@ -436,64 +539,79 @@
                             password
                         );
 
-                    await controllaProfiloComune(
+                    await verificaProfiloComune(
                         credenziali.user
                     );
 
                 } catch (error) {
+
                     console.error(
-                        "Errore login Firebase:",
+                        "Errore accesso:",
                         error.code,
                         error.message
                     );
 
                     switch (error.code) {
+
                         case "auth/invalid-email":
+
                             mostraMessaggio(
                                 "L’indirizzo email non è valido.",
                                 "error"
                             );
+
                             break;
 
                         case "auth/invalid-credential":
                         case "auth/user-not-found":
                         case "auth/wrong-password":
+
                             mostraMessaggio(
                                 "Email o password non corretti.",
                                 "error"
                             );
+
                             break;
 
                         case "auth/user-disabled":
+
                             mostraMessaggio(
                                 "Questo account è stato disabilitato.",
                                 "error"
                             );
+
                             break;
 
                         case "auth/too-many-requests":
+
                             mostraMessaggio(
                                 "Troppi tentativi di accesso. Riprova più tardi.",
                                 "error"
                             );
+
                             break;
 
                         case "auth/network-request-failed":
+
                             mostraMessaggio(
                                 "Errore di connessione. Controlla la rete e riprova.",
                                 "error"
                             );
+
                             break;
 
                         case "permission-denied":
                         case "firestore/permission-denied":
+
                             mostraMessaggio(
-                                "Non è possibile verificare l’autorizzazione del profilo.",
+                                "Le regole di sicurezza non consentono ancora la verifica del profilo.",
                                 "error"
                             );
+
                             break;
 
                         default:
+
                             mostraMessaggio(
                                 "Accesso non riuscito. Riprova.",
                                 "error"
@@ -506,23 +624,28 @@
         );
 
         async function recuperaPassword() {
+
             pulisciMessaggio();
 
-            const email = emailInput.value
-                .trim()
-                .toLowerCase();
+            const email =
+                emailInput.value
+                    .trim()
+                    .toLowerCase();
 
             if (!email) {
+
                 mostraMessaggio(
                     "Inserisci prima l’email istituzionale.",
                     "info"
                 );
 
                 emailInput.focus();
+
                 return;
             }
 
             try {
+
                 await sendPasswordResetEmail(
                     auth,
                     email
@@ -534,6 +657,7 @@
                 );
 
             } catch (error) {
+
                 console.error(
                     "Errore recupero password:",
                     error.code,
@@ -541,28 +665,36 @@
                 );
 
                 switch (error.code) {
+
                     case "auth/invalid-email":
+
                         mostraMessaggio(
                             "L’indirizzo email non è valido.",
                             "error"
                         );
+
                         break;
 
                     case "auth/too-many-requests":
+
                         mostraMessaggio(
                             "Sono state effettuate troppe richieste. Riprova più tardi.",
                             "error"
                         );
+
                         break;
 
                     case "auth/network-request-failed":
+
                         mostraMessaggio(
                             "Errore di connessione. Controlla la rete.",
                             "error"
                         );
+
                         break;
 
                     default:
+
                         mostraMessaggio(
                             "Non è stato possibile inviare l’email di recupero.",
                             "error"
@@ -579,6 +711,7 @@
         resetPasswordLink.addEventListener(
             "keydown",
             (event) => {
+
                 if (
                     event.key === "Enter" ||
                     event.key === " "
@@ -588,6 +721,7 @@
                 }
             }
         );
+
     </script>
 
 </body>
