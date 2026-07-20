@@ -1,11 +1,594 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<title>Login Comune</title>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Territorio Live - Accesso Comune</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: #111;
+            color: #fff;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 390px;
+            padding: 32px;
+            border: 1px solid #2d2d2d;
+            border-radius: 18px;
+            background: #1d1d1d;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+        }
+
+        .logo {
+            margin: 0;
+            color: #39d353;
+            text-align: center;
+            font-size: 30px;
+            font-weight: 800;
+        }
+
+        .area-title {
+            margin-top: 8px;
+            color: #fff;
+            text-align: center;
+            font-size: 19px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            margin: 14px 0 24px;
+            color: #bcbcbc;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            color: #dedede;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        input {
+            width: 100%;
+            margin-top: 7px;
+            padding: 13px;
+            border: 1px solid #444;
+            border-radius: 9px;
+            outline: none;
+            background: #fff;
+            color: #111;
+            font-size: 16px;
+        }
+
+        input:focus {
+            border-color: #39d353;
+            box-shadow: 0 0 0 3px rgba(57, 211, 83, 0.15);
+        }
+
+        button {
+            width: 100%;
+            margin-top: 22px;
+            padding: 13px;
+            border: 0;
+            border-radius: 9px;
+            background: #39d353;
+            color: #111;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #4de566;
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .forgot-password {
+            display: block;
+            margin-top: 16px;
+            color: #39d353;
+            text-align: center;
+            font-size: 14px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .forgot-password:hover {
+            text-decoration: underline;
+        }
+
+        #message {
+            min-height: 22px;
+            margin-top: 18px;
+            padding: 0;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        #message.error {
+            padding: 11px;
+            background: rgba(255, 85, 85, 0.12);
+            color: #ff8585;
+        }
+
+        #message.success {
+            padding: 11px;
+            background: rgba(57, 211, 83, 0.12);
+            color: #75e887;
+        }
+
+        #message.info {
+            padding: 11px;
+            background: rgba(255, 193, 7, 0.12);
+            color: #ffd45c;
+        }
+
+        .footer {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            color: #999;
+            text-align: center;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+    </style>
 </head>
+
 <body>
-<h1>Login Comune - Territorio Live</h1>
-<p>Dashboard Comune V1 in sviluppo.</p>
+
+    <main class="box">
+        <h1 class="logo">Territorio Live</h1>
+
+        <div class="area-title">
+            Area riservata Comune
+        </div>
+
+        <div class="subtitle">
+            Accedi con le credenziali associate al profilo
+            istituzionale del tuo Comune.
+        </div>
+
+        <form id="loginForm">
+
+            <label for="email">
+                Email istituzionale
+            </label>
+
+            <input
+                id="email"
+                type="email"
+                placeholder="esempio@comune.it"
+                autocomplete="username"
+                required
+            >
+
+            <label for="password">
+                Password
+            </label>
+
+            <input
+                id="password"
+                type="password"
+                placeholder="Inserisci la password"
+                autocomplete="current-password"
+                required
+            >
+
+            <button id="loginBtn" type="submit">
+                Accedi
+            </button>
+        </form>
+
+        <a
+            id="resetPasswordLink"
+            class="forgot-password"
+            role="button"
+            tabindex="0"
+        >
+            Password dimenticata?
+        </a>
+
+        <div id="message" aria-live="polite"></div>
+
+        <div class="footer">
+            L’accesso è consentito esclusivamente ai profili
+            comunali autorizzati dal gestore di Territorio Live.
+        </div>
+    </main>
+
+    <script type="module">
+        import {
+            initializeApp
+        } from
+        "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+
+        import {
+            getAuth,
+            onAuthStateChanged,
+            signInWithEmailAndPassword,
+            sendPasswordResetEmail,
+            signOut
+        } from
+        "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+        import {
+            getFirestore,
+            doc,
+            getDoc
+        } from
+        "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhAJOjQSXmzvo2QnuHb4EIDTK88DCHgm0",
+            authDomain: "territorio-live.firebaseapp.com",
+            projectId: "territorio-live",
+            storageBucket: "territorio-live.firebasestorage.app",
+            messagingSenderId: "1014933311241",
+            appId: "1:1014933311241:web:21cd7b52882677ede58dd8",
+            measurementId: "G-96WJ75QWLW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const loginForm = document.getElementById("loginForm");
+        const emailInput = document.getElementById("email");
+        const passwordInput = document.getElementById("password");
+        const loginBtn = document.getElementById("loginBtn");
+        const messageBox = document.getElementById("message");
+        const resetPasswordLink =
+            document.getElementById("resetPasswordLink");
+
+        let controlloAutomaticoEseguito = false;
+
+        function mostraMessaggio(testo, tipo = "error") {
+            messageBox.textContent = testo;
+            messageBox.className = tipo;
+        }
+
+        function pulisciMessaggio() {
+            messageBox.textContent = "";
+            messageBox.className = "";
+        }
+
+        function impostaCaricamento(attivo) {
+            loginBtn.disabled = attivo;
+
+            loginBtn.textContent = attivo
+                ? "Verifica accesso..."
+                : "Accedi";
+        }
+
+        async function controllaProfiloComune(user) {
+            const profiloRef = doc(
+                db,
+                "utentiComuni",
+                user.uid
+            );
+
+            const profiloSnapshot = await getDoc(profiloRef);
+
+            if (!profiloSnapshot.exists()) {
+                await signOut(auth);
+
+                mostraMessaggio(
+                    "Questo account non è associato a un profilo Comune autorizzato.",
+                    "error"
+                );
+
+                return false;
+            }
+
+            const profilo = profiloSnapshot.data();
+
+            if (profilo.ruolo !== "comune") {
+                await signOut(auth);
+
+                mostraMessaggio(
+                    "Questo account non dispone dell’autorizzazione per accedere all’area Comune.",
+                    "error"
+                );
+
+                return false;
+            }
+
+            if (profilo.stato === "in_attesa") {
+                await signOut(auth);
+
+                mostraMessaggio(
+                    "La registrazione è stata ricevuta ed è in attesa di approvazione.",
+                    "info"
+                );
+
+                return false;
+            }
+
+            if (profilo.stato === "disattivato") {
+                await signOut(auth);
+
+                mostraMessaggio(
+                    "Il profilo del Comune è stato disattivato. Contatta il gestore di Territorio Live.",
+                    "error"
+                );
+
+                return false;
+            }
+
+            if (profilo.stato !== "attivo") {
+                await signOut(auth);
+
+                mostraMessaggio(
+                    "Il profilo non è ancora abilitato all’accesso.",
+                    "info"
+                );
+
+                return false;
+            }
+
+            if (!profilo.comune) {
+                await signOut(auth);
+
+                mostraMessaggio(
+                    "Al profilo non risulta associato alcun Comune.",
+                    "error"
+                );
+
+                return false;
+            }
+
+            sessionStorage.setItem(
+                "territorioLiveComune",
+                JSON.stringify({
+                    uid: user.uid,
+                    email: user.email,
+                    comune: profilo.comune,
+                    provincia: profilo.provincia || "",
+                    ruolo: profilo.ruolo,
+                    stato: profilo.stato
+                })
+            );
+
+            window.location.replace("./dashboard.html");
+
+            return true;
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (controlloAutomaticoEseguito) {
+                return;
+            }
+
+            controlloAutomaticoEseguito = true;
+
+            if (!user) {
+                return;
+            }
+
+            impostaCaricamento(true);
+
+            try {
+                await controllaProfiloComune(user);
+            } catch (error) {
+                console.error(
+                    "Errore controllo profilo Comune:",
+                    error
+                );
+
+                await signOut(auth);
+
+                mostraMessaggio(
+                    "Non è stato possibile verificare il profilo. Riprova.",
+                    "error"
+                );
+
+                impostaCaricamento(false);
+            }
+        });
+
+        loginForm.addEventListener(
+            "submit",
+            async (event) => {
+                event.preventDefault();
+
+                pulisciMessaggio();
+                impostaCaricamento(true);
+
+                const email = emailInput.value
+                    .trim()
+                    .toLowerCase();
+
+                const password = passwordInput.value;
+
+                try {
+                    const credenziali =
+                        await signInWithEmailAndPassword(
+                            auth,
+                            email,
+                            password
+                        );
+
+                    await controllaProfiloComune(
+                        credenziali.user
+                    );
+
+                } catch (error) {
+                    console.error(
+                        "Errore login Firebase:",
+                        error.code,
+                        error.message
+                    );
+
+                    switch (error.code) {
+                        case "auth/invalid-email":
+                            mostraMessaggio(
+                                "L’indirizzo email non è valido.",
+                                "error"
+                            );
+                            break;
+
+                        case "auth/invalid-credential":
+                        case "auth/user-not-found":
+                        case "auth/wrong-password":
+                            mostraMessaggio(
+                                "Email o password non corretti.",
+                                "error"
+                            );
+                            break;
+
+                        case "auth/user-disabled":
+                            mostraMessaggio(
+                                "Questo account è stato disabilitato.",
+                                "error"
+                            );
+                            break;
+
+                        case "auth/too-many-requests":
+                            mostraMessaggio(
+                                "Troppi tentativi di accesso. Riprova più tardi.",
+                                "error"
+                            );
+                            break;
+
+                        case "auth/network-request-failed":
+                            mostraMessaggio(
+                                "Errore di connessione. Controlla la rete e riprova.",
+                                "error"
+                            );
+                            break;
+
+                        case "permission-denied":
+                        case "firestore/permission-denied":
+                            mostraMessaggio(
+                                "Non è possibile verificare l’autorizzazione del profilo.",
+                                "error"
+                            );
+                            break;
+
+                        default:
+                            mostraMessaggio(
+                                "Accesso non riuscito. Riprova.",
+                                "error"
+                            );
+                    }
+
+                    impostaCaricamento(false);
+                }
+            }
+        );
+
+        async function recuperaPassword() {
+            pulisciMessaggio();
+
+            const email = emailInput.value
+                .trim()
+                .toLowerCase();
+
+            if (!email) {
+                mostraMessaggio(
+                    "Inserisci prima l’email istituzionale.",
+                    "info"
+                );
+
+                emailInput.focus();
+                return;
+            }
+
+            try {
+                await sendPasswordResetEmail(
+                    auth,
+                    email
+                );
+
+                mostraMessaggio(
+                    "Email di recupero inviata. Controlla anche la cartella spam.",
+                    "success"
+                );
+
+            } catch (error) {
+                console.error(
+                    "Errore recupero password:",
+                    error.code,
+                    error.message
+                );
+
+                switch (error.code) {
+                    case "auth/invalid-email":
+                        mostraMessaggio(
+                            "L’indirizzo email non è valido.",
+                            "error"
+                        );
+                        break;
+
+                    case "auth/too-many-requests":
+                        mostraMessaggio(
+                            "Sono state effettuate troppe richieste. Riprova più tardi.",
+                            "error"
+                        );
+                        break;
+
+                    case "auth/network-request-failed":
+                        mostraMessaggio(
+                            "Errore di connessione. Controlla la rete.",
+                            "error"
+                        );
+                        break;
+
+                    default:
+                        mostraMessaggio(
+                            "Non è stato possibile inviare l’email di recupero.",
+                            "error"
+                        );
+                }
+            }
+        }
+
+        resetPasswordLink.addEventListener(
+            "click",
+            recuperaPassword
+        );
+
+        resetPasswordLink.addEventListener(
+            "keydown",
+            (event) => {
+                if (
+                    event.key === "Enter" ||
+                    event.key === " "
+                ) {
+                    event.preventDefault();
+                    recuperaPassword();
+                }
+            }
+        );
+    </script>
+
 </body>
 </html>
