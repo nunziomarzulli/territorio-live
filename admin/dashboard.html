@@ -526,6 +526,246 @@ body.image-viewer-open{
   }
 }
 
+
+/* Gestione Comuni */
+#municipalitiesBtn{
+  border:none;
+  border-radius:9px;
+  padding:10px 15px;
+  background:#1565c0;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+#municipalitiesBtn:disabled{
+  opacity:.7;
+  cursor:not-allowed;
+}
+
+#municipalitiesPanel{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(0,0,0,.82);
+  z-index:9000;
+}
+
+#municipalitiesPanel.active{
+  display:flex;
+}
+
+.municipalities-card{
+  width:min(1050px,100%);
+  max-height:92vh;
+  overflow:auto;
+  border:1px solid #3a3a3a;
+  border-radius:16px;
+  background:#1d1d1d;
+  box-shadow:0 20px 60px rgba(0,0,0,.55);
+}
+
+.municipalities-header{
+  position:sticky;
+  top:0;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:16px 18px;
+  background:#1d1d1d;
+  border-bottom:1px solid #333;
+}
+
+.municipalities-header h2{
+  margin:0;
+  color:#39d353;
+  font-size:21px;
+}
+
+#closeMunicipalitiesBtn{
+  width:42px;
+  height:42px;
+  border:none;
+  border-radius:50%;
+  background:#333;
+  color:white;
+  font-size:26px;
+  cursor:pointer;
+}
+
+.municipalities-content{
+  padding:18px;
+}
+
+#municipalityForm{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:13px;
+  padding:16px;
+  border:1px solid #333;
+  border-radius:13px;
+  background:#181818;
+}
+
+.municipality-field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.municipality-field.full{
+  grid-column:1 / -1;
+}
+
+.municipality-field label{
+  color:#bbb;
+  font-size:12px;
+  font-weight:bold;
+}
+
+.municipality-field input,
+.municipality-field select{
+  width:100%;
+  padding:11px;
+  border:1px solid #444;
+  border-radius:9px;
+  outline:none;
+  background:#2a2a2a;
+  color:white;
+  font-size:14px;
+}
+
+.municipality-field input:focus,
+.municipality-field select:focus{
+  border-color:#39d353;
+  box-shadow:0 0 0 3px rgba(57,211,83,.14);
+}
+
+.municipality-form-actions{
+  grid-column:1 / -1;
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+#saveMunicipalityBtn,
+#resetMunicipalityFormBtn{
+  border:none;
+  border-radius:9px;
+  padding:11px 16px;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+#saveMunicipalityBtn{background:#2e7d32}
+#resetMunicipalityFormBtn{background:#555}
+
+#municipalityMessage{
+  min-height:22px;
+  margin:13px 0;
+  padding:0;
+  border-radius:8px;
+  text-align:center;
+  font-size:14px;
+}
+
+#municipalityMessage.success{
+  padding:10px;
+  background:rgba(57,211,83,.12);
+  color:#75e887;
+}
+
+#municipalityMessage.error{
+  padding:10px;
+  background:rgba(255,85,85,.12);
+  color:#ff8585;
+}
+
+.municipalities-list-title{
+  margin:22px 0 10px;
+  font-size:18px;
+}
+
+#municipalitiesList{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.municipality-item{
+  display:grid;
+  grid-template-columns:minmax(150px,1.2fr) minmax(170px,1.3fr) minmax(110px,.7fr) auto;
+  gap:12px;
+  align-items:center;
+  padding:13px;
+  border:1px solid #333;
+  border-radius:11px;
+  background:#242424;
+}
+
+.municipality-name{
+  font-weight:bold;
+  color:white;
+}
+
+.municipality-meta{
+  margin-top:4px;
+  color:#aaa;
+  font-size:12px;
+  line-height:1.4;
+}
+
+.municipality-status{
+  display:inline-block;
+  padding:5px 9px;
+  border-radius:15px;
+  font-size:12px;
+  font-weight:bold;
+  text-align:center;
+}
+
+.status-in_attesa{background:#6d4c00;color:#ffe082}
+.status-attivo{background:#1b5e20;color:#a5d6a7}
+.status-disattivato{background:#6d1b1b;color:#ffcdd2}
+
+.municipality-actions{
+  display:flex;
+  gap:7px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+
+.municipality-actions button{
+  border:none;
+  border-radius:8px;
+  padding:8px 10px;
+  color:white;
+  font-size:12px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.edit-municipality-btn{background:#1565c0}
+.activate-municipality-btn{background:#2e7d32}
+.disable-municipality-btn{background:#ef6c00}
+.delete-municipality-btn{background:#c62828}
+
+@media(max-width:760px){
+  #municipalityForm{grid-template-columns:1fr}
+  .municipality-field.full{grid-column:auto}
+  .municipality-form-actions{grid-column:auto}
+  .municipality-item{grid-template-columns:1fr}
+  .municipality-actions{justify-content:flex-start}
+}
+
 </style>
 </head>
 
@@ -542,6 +782,10 @@ body.image-viewer-open{
     </div>
 
     <div class="header-actions">
+      <button id="municipalitiesBtn" type="button">
+        🏛️ Gestione Comuni
+      </button>
+
       <button id="refreshBtn" type="button">
         ↻ Aggiorna segnalazioni
       </button>
@@ -620,6 +864,85 @@ body.image-viewer-open{
 </div>
 
 
+
+<div id="municipalitiesPanel" aria-hidden="true">
+  <section class="municipalities-card" role="dialog" aria-modal="true" aria-labelledby="municipalitiesTitle">
+    <div class="municipalities-header">
+      <h2 id="municipalitiesTitle">Gestione Comuni ed Enti</h2>
+      <button id="closeMunicipalitiesBtn" type="button" aria-label="Chiudi">×</button>
+    </div>
+
+    <div class="municipalities-content">
+      <form id="municipalityForm">
+        <input id="municipalityDocumentId" type="hidden">
+
+        <div class="municipality-field">
+          <label for="municipalityName">Comune / Ente *</label>
+          <input id="municipalityName" type="text" required placeholder="Es. Adelfia">
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityProvince">Provincia *</label>
+          <input id="municipalityProvince" type="text" required placeholder="Es. Bari">
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityEmail">Email istituzionale *</label>
+          <input id="municipalityEmail" type="email" required placeholder="protocollo@comune.it">
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityPhone">Telefono</label>
+          <input id="municipalityPhone" type="text" placeholder="Numero di contatto">
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityContact">Referente *</label>
+          <input id="municipalityContact" type="text" required placeholder="Nome e cognome">
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityContactRole">Ruolo del referente</label>
+          <input id="municipalityContactRole" type="text" placeholder="Es. Sindaco, assessore, funzionario">
+        </div>
+
+        <div class="municipality-field full">
+          <label for="municipalityUid">UID Firebase (lascia vuoto finché l’account non è stato creato)</label>
+          <input id="municipalityUid" type="text" placeholder="UID utente Firebase">
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityStatus">Stato</label>
+          <select id="municipalityStatus">
+            <option value="in_attesa">In attesa</option>
+            <option value="attivo">Attivo</option>
+            <option value="disattivato">Disattivato</option>
+          </select>
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityPlan">Piano</label>
+          <select id="municipalityPlan">
+            <option value="prova">Prova gratuita</option>
+            <option value="abbonamento">Abbonamento</option>
+            <option value="nessuno">Nessuno</option>
+          </select>
+        </div>
+
+        <div class="municipality-form-actions">
+          <button id="resetMunicipalityFormBtn" type="button">Pulisci</button>
+          <button id="saveMunicipalityBtn" type="submit">Salva Comune</button>
+        </div>
+      </form>
+
+      <div id="municipalityMessage" aria-live="polite"></div>
+
+      <h3 class="municipalities-list-title">Comuni registrati</h3>
+      <div id="municipalitiesList">Caricamento...</div>
+    </div>
+  </section>
+</div>
+
 <div
   id="imageViewer"
   role="dialog"
@@ -663,6 +986,7 @@ import {
   getFirestore,
   collection,
   getDocs,
+  setDoc,
   query,
   orderBy,
   deleteDoc,
@@ -708,6 +1032,26 @@ const imageViewerImage = document.getElementById("imageViewerImage");
 const imageViewerClose = document.getElementById("imageViewerClose");
 const imageViewerCaption = document.getElementById("imageViewerCaption");
 
+const municipalitiesBtn = document.getElementById("municipalitiesBtn");
+const municipalitiesPanel = document.getElementById("municipalitiesPanel");
+const closeMunicipalitiesBtn = document.getElementById("closeMunicipalitiesBtn");
+const municipalityForm = document.getElementById("municipalityForm");
+const municipalityDocumentId = document.getElementById("municipalityDocumentId");
+const municipalityName = document.getElementById("municipalityName");
+const municipalityProvince = document.getElementById("municipalityProvince");
+const municipalityEmail = document.getElementById("municipalityEmail");
+const municipalityPhone = document.getElementById("municipalityPhone");
+const municipalityContact = document.getElementById("municipalityContact");
+const municipalityContactRole = document.getElementById("municipalityContactRole");
+const municipalityUid = document.getElementById("municipalityUid");
+const municipalityStatus = document.getElementById("municipalityStatus");
+const municipalityPlan = document.getElementById("municipalityPlan");
+const resetMunicipalityFormBtn = document.getElementById("resetMunicipalityFormBtn");
+const saveMunicipalityBtn = document.getElementById("saveMunicipalityBtn");
+const municipalityMessage = document.getElementById("municipalityMessage");
+const municipalitiesList = document.getElementById("municipalitiesList");
+
+let municipalities = [];
 let imageViewerHistoryActive = false;
 
 
@@ -1502,6 +1846,177 @@ window.deleteAdminReport = async function(reportId){
   }
 };
 
+
+function municipalitySlug(value){
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g,"-")
+    .replace(/^-+|-+$/g,"");
+}
+
+function showMunicipalityMessage(text,type="error"){
+  municipalityMessage.textContent = text;
+  municipalityMessage.className = type;
+}
+
+function clearMunicipalityMessage(){
+  municipalityMessage.textContent = "";
+  municipalityMessage.className = "";
+}
+
+function resetMunicipalityForm(){
+  municipalityForm.reset();
+  municipalityDocumentId.value = "";
+  municipalityStatus.value = "in_attesa";
+  municipalityPlan.value = "prova";
+  saveMunicipalityBtn.textContent = "Salva Comune";
+  clearMunicipalityMessage();
+}
+
+function openMunicipalitiesPanel(){
+  municipalitiesPanel.classList.add("active");
+  municipalitiesPanel.setAttribute("aria-hidden","false");
+  document.body.style.overflow = "hidden";
+  loadMunicipalities();
+}
+
+function closeMunicipalitiesPanel(){
+  municipalitiesPanel.classList.remove("active");
+  municipalitiesPanel.setAttribute("aria-hidden","true");
+  document.body.style.overflow = "hidden";
+}
+
+function formatMunicipalityDate(value){
+  if(!value) return "-";
+  try{
+    const date = typeof value.toDate === "function" ? value.toDate() : new Date(value);
+    if(Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleDateString("it-IT");
+  }catch(error){
+    return "-";
+  }
+}
+
+function renderMunicipalities(){
+  if(municipalities.length === 0){
+    municipalitiesList.innerHTML = "<div style=\"color:#aaa\">Nessun Comune registrato.</div>";
+    return;
+  }
+
+  municipalitiesList.innerHTML = municipalities.map(item => {
+    const status = String(item.stato || "in_attesa");
+    const trialEnd = item.dataFineProva ? formatMunicipalityDate(item.dataFineProva) : "-";
+    return `
+      <div class="municipality-item">
+        <div>
+          <div class="municipality-name">${escapeHtml(item.comune || item.id)}</div>
+          <div class="municipality-meta">Provincia: ${escapeHtml(item.provincia || "-")}<br>Referente: ${escapeHtml(item.referente || "-")}</div>
+        </div>
+        <div>
+          <div>${escapeHtml(item.email || "-")}</div>
+          <div class="municipality-meta">UID: ${escapeHtml(item.uid || "non assegnato")}<br>Fine prova: ${escapeHtml(trialEnd)}</div>
+        </div>
+        <div>
+          <span class="municipality-status status-${escapeHtml(status)}">${escapeHtml(status.replaceAll("_"," "))}</span>
+          <div class="municipality-meta">Piano: ${escapeHtml(item.piano || "-")}</div>
+        </div>
+        <div class="municipality-actions">
+          <button class="edit-municipality-btn" type="button" data-action="edit" data-id="${escapeHtml(item.id)}">Modifica</button>
+          ${status !== "attivo" ? `<button class="activate-municipality-btn" type="button" data-action="activate" data-id="${escapeHtml(item.id)}">Attiva 90 gg</button>` : `<button class="disable-municipality-btn" type="button" data-action="disable" data-id="${escapeHtml(item.id)}">Disattiva</button>`}
+          <button class="delete-municipality-btn" type="button" data-action="delete" data-id="${escapeHtml(item.id)}">Elimina</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function loadMunicipalities(){
+  municipalitiesList.textContent = "Caricamento...";
+  try{
+    const snapshot = await getDocs(collection(db,"utentiComuni"));
+    municipalities = snapshot.docs.map(item => ({id:item.id,...item.data()}));
+    municipalities.sort((a,b) => String(a.comune || a.id).localeCompare(String(b.comune || b.id),"it"));
+    renderMunicipalities();
+  }catch(error){
+    console.error("Errore caricamento Comuni:",error);
+    municipalitiesList.textContent = "Impossibile caricare i Comuni.";
+  }
+}
+
+function editMunicipality(id){
+  const item = municipalities.find(entry => entry.id === id);
+  if(!item) return;
+  municipalityDocumentId.value = item.id;
+  municipalityName.value = item.comune || "";
+  municipalityProvince.value = item.provincia || "";
+  municipalityEmail.value = item.email || "";
+  municipalityPhone.value = item.telefono || "";
+  municipalityContact.value = item.referente || "";
+  municipalityContactRole.value = item.ruoloReferente || "";
+  municipalityUid.value = item.uid || "";
+  municipalityStatus.value = item.stato || "in_attesa";
+  municipalityPlan.value = item.piano || "prova";
+  saveMunicipalityBtn.textContent = "Aggiorna Comune";
+  clearMunicipalityMessage();
+  municipalityName.focus();
+}
+
+async function activateMunicipality(id){
+  const item = municipalities.find(entry => entry.id === id);
+  if(!item) return;
+  if(!String(item.uid || "").trim()){
+    alert("Prima inserisci l’UID Firebase del Comune.");
+    editMunicipality(id);
+    return;
+  }
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + 90);
+  try{
+    await updateDoc(doc(db,"utentiComuni",id),{
+      stato:"attivo",
+      piano:"prova",
+      dataAttivazione:serverTimestamp(),
+      dataFineProva:endDate,
+      aggiornatoAt:serverTimestamp(),
+      aggiornatoDa:auth.currentUser?.email || "admin"
+    });
+    await loadMunicipalities();
+  }catch(error){
+    console.error("Errore attivazione Comune:",error);
+    alert("Attivazione non riuscita. Controlla le regole Firestore.");
+  }
+}
+
+async function disableMunicipality(id){
+  if(!confirm("Vuoi disattivare l’accesso di questo Comune?")) return;
+  try{
+    await updateDoc(doc(db,"utentiComuni",id),{
+      stato:"disattivato",
+      aggiornatoAt:serverTimestamp(),
+      aggiornatoDa:auth.currentUser?.email || "admin"
+    });
+    await loadMunicipalities();
+  }catch(error){
+    console.error("Errore disattivazione Comune:",error);
+    alert("Disattivazione non riuscita.");
+  }
+}
+
+async function deleteMunicipality(id){
+  if(!confirm("Vuoi eliminare definitivamente questo Comune da Firestore?\n\nL’utente Firebase Authentication non verrà eliminato automaticamente.")) return;
+  try{
+    await deleteDoc(doc(db,"utentiComuni",id));
+    await loadMunicipalities();
+    resetMunicipalityForm();
+  }catch(error){
+    console.error("Errore eliminazione Comune:",error);
+    alert("Eliminazione non riuscita.");
+  }
+}
+
 function initMap(){
   if(adminMap){
     return;
@@ -1632,6 +2147,88 @@ resetFiltersBtn.addEventListener("click",() => {
   moderationOnly = false;
 
   renderMap();
+});
+
+
+municipalitiesBtn.addEventListener("click",openMunicipalitiesPanel);
+closeMunicipalitiesBtn.addEventListener("click",closeMunicipalitiesPanel);
+resetMunicipalityFormBtn.addEventListener("click",resetMunicipalityForm);
+
+municipalitiesPanel.addEventListener("click",event => {
+  if(event.target === municipalitiesPanel){
+    closeMunicipalitiesPanel();
+  }
+});
+
+document.addEventListener("keydown",event => {
+  if(event.key === "Escape" && municipalitiesPanel.classList.contains("active")){
+    closeMunicipalitiesPanel();
+  }
+});
+
+municipalityForm.addEventListener("submit",async event => {
+  event.preventDefault();
+  clearMunicipalityMessage();
+
+  const existingId = municipalityDocumentId.value.trim();
+  const generatedId = municipalitySlug(municipalityName.value);
+  const documentId = existingId || generatedId;
+
+  if(!documentId){
+    showMunicipalityMessage("Inserisci il nome del Comune.","error");
+    return;
+  }
+
+  saveMunicipalityBtn.disabled = true;
+  saveMunicipalityBtn.textContent = "Salvataggio...";
+
+  const previous = municipalities.find(item => item.id === documentId) || {};
+
+  const data = {
+    comune:municipalityName.value.trim(),
+    provincia:municipalityProvince.value.trim(),
+    email:municipalityEmail.value.trim().toLowerCase(),
+    telefono:municipalityPhone.value.trim(),
+    referente:municipalityContact.value.trim(),
+    ruoloReferente:municipalityContactRole.value.trim(),
+    uid:municipalityUid.value.trim(),
+    ruolo:"comune",
+    stato:municipalityStatus.value,
+    piano:municipalityPlan.value,
+    dataRichiesta:previous.dataRichiesta || serverTimestamp(),
+    dataAttivazione:previous.dataAttivazione || null,
+    dataFineProva:previous.dataFineProva || null,
+    creatoDa:previous.creatoDa || auth.currentUser?.email || "admin",
+    aggiornatoAt:serverTimestamp(),
+    aggiornatoDa:auth.currentUser?.email || "admin"
+  };
+
+  try{
+    await setDoc(doc(db,"utentiComuni",documentId),data,{merge:true});
+    showMunicipalityMessage(existingId ? "Comune aggiornato." : "Comune creato correttamente.","success");
+    await loadMunicipalities();
+    if(!existingId){
+      resetMunicipalityForm();
+      showMunicipalityMessage("Comune creato correttamente.","success");
+    }
+  }catch(error){
+    console.error("Errore salvataggio Comune:",error);
+    showMunicipalityMessage("Salvataggio non riuscito. Controlla le regole Firestore.","error");
+  }finally{
+    saveMunicipalityBtn.disabled = false;
+    saveMunicipalityBtn.textContent = municipalityDocumentId.value ? "Aggiorna Comune" : "Salva Comune";
+  }
+});
+
+municipalitiesList.addEventListener("click",event => {
+  const button = event.target.closest("button[data-action]");
+  if(!button) return;
+  const id = button.dataset.id;
+  const action = button.dataset.action;
+  if(action === "edit") editMunicipality(id);
+  if(action === "activate") activateMunicipality(id);
+  if(action === "disable") disableMunicipality(id);
+  if(action === "delete") deleteMunicipality(id);
 });
 
 refreshBtn.addEventListener("click",loadReports);
