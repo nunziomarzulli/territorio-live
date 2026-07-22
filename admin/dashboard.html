@@ -544,6 +544,21 @@ body.image-viewer-open{
   cursor:not-allowed;
 }
 
+#municipalitiesCount{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:24px;
+  height:24px;
+  margin-left:7px;
+  padding:0 7px;
+  border-radius:999px;
+  background:#ffffff;
+  color:#1565c0;
+  font-size:13px;
+  font-weight:900;
+}
+
 #municipalitiesPanel{
   position:fixed;
   inset:0;
@@ -784,6 +799,7 @@ body.image-viewer-open{
     <div class="header-actions">
       <button id="municipalitiesBtn" type="button">
         🏛️ Gestione Comuni
+        <span id="municipalitiesCount" aria-label="Comuni registrati">0</span>
       </button>
 
       <button id="refreshBtn" type="button">
@@ -1050,6 +1066,7 @@ const resetMunicipalityFormBtn = document.getElementById("resetMunicipalityFormB
 const saveMunicipalityBtn = document.getElementById("saveMunicipalityBtn");
 const municipalityMessage = document.getElementById("municipalityMessage");
 const municipalitiesList = document.getElementById("municipalitiesList");
+const municipalitiesCount = document.getElementById("municipalitiesCount");
 
 let municipalities = [];
 let imageViewerHistoryActive = false;
@@ -1901,6 +1918,14 @@ function formatMunicipalityDate(value){
 }
 
 function renderMunicipalities(){
+  municipalitiesCount.textContent = String(municipalities.length);
+  municipalitiesCount.setAttribute(
+    "aria-label",
+    municipalities.length === 1
+      ? "1 Comune registrato"
+      : `${municipalities.length} Comuni registrati`
+  );
+
   if(municipalities.length === 0){
     municipalitiesList.innerHTML = "<div style=\"color:#aaa\">Nessun Comune registrato.</div>";
     return;
@@ -1942,6 +1967,9 @@ async function loadMunicipalities(){
     renderMunicipalities();
   }catch(error){
     console.error("Errore caricamento Comuni:",error);
+    municipalities = [];
+    municipalitiesCount.textContent = "!";
+    municipalitiesCount.setAttribute("aria-label","Errore nel conteggio dei Comuni");
     municipalitiesList.textContent = "Impossibile caricare i Comuni.";
   }
 }
@@ -2264,6 +2292,7 @@ onAuthStateChanged(auth,user => {
   setTimeout(() => {
     adminMap.invalidateSize();
     loadReports();
+    loadMunicipalities();
   },150);
 });
 
