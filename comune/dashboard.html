@@ -16,12 +16,22 @@ button,input,select,textarea{font:inherit}
 #loading{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;background:#0f1720;color:#fff;font-size:17px}
 #app{display:none;width:100%;height:100%}
 
-header{height:76px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:11px 18px;background:#fff;border-bottom:1px solid #dce3e9}
+header{
+  height:76px;
+  display:grid;
+  grid-template-columns:auto minmax(360px,1fr) auto;
+  align-items:center;
+  gap:18px;
+  padding:8px 18px;
+  background:#fff;
+  border-bottom:1px solid #dce3e9;
+}
 .identity{display:flex;align-items:center;gap:14px;min-width:0}
 .logo{font-size:22px;font-weight:800;white-space:nowrap}.logo span{color:#1f9d55}
 .municipality{min-width:0;padding-left:14px;border-left:1px solid #dce3e9}
 .municipality h1{margin:0;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .municipality p{margin:4px 0 0;color:#64717d;font-size:12px}
+.header-center{min-width:0;display:flex;justify-content:center}
 .header-actions{display:flex;align-items:center;gap:10px}
 .user-label{text-align:right;font-size:12px;color:#64717d;max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .header-btn{border:0;border-radius:9px;padding:10px 13px;font-weight:bold;cursor:pointer}
@@ -78,27 +88,42 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
 #sidePanel{display:flex;flex-direction:column;min-width:0;background:#fff}
 
 .subscription-widget{
-  padding:11px 12px;
-  border-bottom:1px solid #dfe5ea;
+  width:min(720px,100%);
+  padding:7px 11px;
+  border:1px solid #dfe5ea;
+  border-radius:10px;
   background:#f8fafb;
 }
-.subscription-widget.warning{background:#fff8e6}
-.subscription-widget.danger{background:#fff0f0}
+.subscription-widget.warning{background:#fff8e6;border-color:#efd58c}
+.subscription-widget.danger{background:#fff0f0;border-color:#efb4b4}
 .subscription-top{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:10px;
+  gap:12px;
 }
 .subscription-title{
-  font-size:13px;
+  font-size:12px;
   font-weight:800;
+  white-space:nowrap;
+}
+.subscription-summary{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+  flex:1;
+}
+.subscription-plan{
+  font-size:12px;
+  font-weight:700;
+  white-space:nowrap;
 }
 .subscription-badge{
   display:inline-flex;
   align-items:center;
   gap:5px;
-  padding:4px 8px;
+  padding:3px 7px;
   border-radius:999px;
   font-size:10px;
   font-weight:800;
@@ -106,57 +131,57 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
   color:#176b36;
   white-space:nowrap;
 }
-.subscription-badge.warning{
-  background:#fff0c2;
-  color:#7a5100;
-}
-.subscription-badge.danger{
-  background:#fde1e1;
-  color:#8a1c1c;
-}
-.subscription-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:7px 12px;
-  margin-top:9px;
-}
-.subscription-item{
-  min-width:0;
-  font-size:11px;
+.subscription-badge.warning{background:#fff0c2;color:#7a5100}
+.subscription-badge.danger{background:#fde1e1;color:#8a1c1c}
+.subscription-meta{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:5px;
+  font-size:10px;
   color:#66727d;
+  white-space:nowrap;
+  overflow:hidden;
 }
-.subscription-item strong{
-  display:block;
-  margin-top:2px;
-  color:#1d2933;
-  font-size:12px;
+.subscription-meta strong{color:#1d2933}
+.subscription-progress{
+  flex:1;
+  min-width:90px;
+  height:7px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#dfe6eb;
+}
+.subscription-progress-bar{
+  width:0%;
+  height:100%;
+  border-radius:999px;
+  background:#198754;
+  transition:width .25s ease;
+}
+.subscription-widget.warning .subscription-progress-bar{background:#ef9f00}
+.subscription-widget.danger .subscription-progress-bar{background:#c62828}
+.subscription-note{
+  margin-top:5px;
+  font-size:10px;
+  color:#4f5c67;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
 }
-.subscription-note{
-  margin-top:9px;
-  padding:8px 9px;
-  border-radius:8px;
-  background:#eef3f6;
-  color:#4f5c67;
-  font-size:11px;
-  line-height:1.4;
-}
-.subscription-widget.warning .subscription-note{background:#ffefc7;color:#725000}
-.subscription-widget.danger .subscription-note{background:#fbdede;color:#7c1f1f}
 #renewSubscriptionBtn{
-  width:100%;
-  margin-top:9px;
+  display:none;
   border:0;
-  border-radius:8px;
-  padding:9px 10px;
+  border-radius:7px;
+  padding:6px 9px;
   background:#1565c0;
   color:#fff;
-  font-size:12px;
+  font-size:10px;
   font-weight:bold;
   cursor:pointer;
+  white-space:nowrap;
 }
+#renewSubscriptionBtn.visible{display:inline-block}
 #renewSubscriptionBtn:hover{filter:brightness(.95)}
 
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid #dfe5ea}
@@ -235,14 +260,26 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
   color:#fff;
 }
 
+@media(max-width:1180px){
+  header{grid-template-columns:auto 1fr auto}
+  .subscription-note{display:none}
+  .subscription-meta{gap:7px}
+}
 @media(max-width:980px){
-  main{grid-template-columns:1.7fr 1fr}
+  header{grid-template-columns:auto auto}
+  .header-center{grid-column:1 / -1;grid-row:2}
+  header{height:auto}
+  main{height:calc(100% - 116px);grid-template-columns:1.7fr 1fr}
   .user-label{display:none}
 }
 @media(max-width:720px){
   body{overflow:auto}
   #app{height:auto;min-height:100%}
-  header{height:auto;align-items:flex-start;flex-wrap:wrap}
+  header{height:auto;display:flex;align-items:flex-start;flex-wrap:wrap}
+  .header-center{order:3;width:100%}
+  .subscription-widget{width:100%}
+  .subscription-summary{gap:7px;flex-wrap:wrap}
+  .subscription-meta{flex-wrap:wrap;white-space:normal}
   main{display:block;height:auto}
   #mapSection{height:55vh;border-right:0;border-bottom:1px solid #d7dee5}
   #sidePanel{height:45vh}
@@ -264,6 +301,33 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
         <h1 id="municipalityName">Dashboard Comune</h1>
         <p id="provinceName"></p>
       </div>
+    </div>
+
+    <div class="header-center">
+      <section id="subscriptionWidget" class="subscription-widget" aria-label="Informazioni abbonamento">
+        <div class="subscription-top">
+          <div class="subscription-title">📦 Abbonamento</div>
+          <div class="subscription-summary">
+            <span id="subscriptionPlan" class="subscription-plan">-</span>
+            <span id="subscriptionStatusBadge" class="subscription-badge">Caricamento...</span>
+            <button id="renewSubscriptionBtn" type="button">Richiedi rinnovo</button>
+          </div>
+        </div>
+
+        <div class="subscription-meta">
+          <span>Scadenza: <strong id="subscriptionExpiry">Da definire</strong></span>
+          <span>Giorni: <strong id="subscriptionDays">In attesa di attivazione</strong></span>
+          <div class="subscription-progress" aria-hidden="true">
+            <div id="subscriptionProgressBar" class="subscription-progress-bar"></div>
+          </div>
+        </div>
+
+        <div id="subscriptionNote" class="subscription-note">
+          Verifica dello stato dell'abbonamento...
+        </div>
+
+        <span id="subscriptionRenewal" style="display:none"></span>
+      </section>
     </div>
 
     <div class="header-actions">
@@ -300,38 +364,6 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
     </section>
 
     <aside id="sidePanel">
-      <section id="subscriptionWidget" class="subscription-widget" aria-label="Informazioni abbonamento">
-        <div class="subscription-top">
-          <div class="subscription-title">📦 Abbonamento Comune</div>
-          <span id="subscriptionStatusBadge" class="subscription-badge">Caricamento...</span>
-        </div>
-
-        <div class="subscription-grid">
-          <div class="subscription-item">
-            Piano
-            <strong id="subscriptionPlan">-</strong>
-          </div>
-          <div class="subscription-item">
-            Scadenza
-            <strong id="subscriptionExpiry">-</strong>
-          </div>
-          <div class="subscription-item">
-            Giorni rimanenti
-            <strong id="subscriptionDays">-</strong>
-          </div>
-          <div class="subscription-item">
-            Ultimo rinnovo
-            <strong id="subscriptionRenewal">-</strong>
-          </div>
-        </div>
-
-        <div id="subscriptionNote" class="subscription-note">
-          Verifica dello stato dell'abbonamento...
-        </div>
-
-        <button id="renewSubscriptionBtn" type="button">Richiedi rinnovo</button>
-      </section>
-
       <div class="tabs">
         <button class="tab active" data-tab="aperta">Aperte <span id="openCount" class="count">0</span></button>
         <button class="tab" data-tab="in_lavorazione">In lavorazione <span id="workCount" class="count">0</span></button>
@@ -548,6 +580,7 @@ const subscriptionExpiry = document.getElementById("subscriptionExpiry");
 const subscriptionDays = document.getElementById("subscriptionDays");
 const subscriptionRenewal = document.getElementById("subscriptionRenewal");
 const subscriptionNote = document.getElementById("subscriptionNote");
+const subscriptionProgressBar = document.getElementById("subscriptionProgressBar");
 const renewSubscriptionBtn = document.getElementById("renewSubscriptionBtn");
 const details = document.getElementById("details");
 const detailTitle = document.getElementById("detailTitle");
@@ -1662,51 +1695,67 @@ function renderSubscriptionWidget(){
   const subscription = currentProfile.abbonamento;
   const status = String(subscription.stato || "in_attesa").toLowerCase();
   const days = subscriptionDaysRemaining(subscription.dataScadenza);
+  const trialDays = Number(subscription.giorniTrial || 90);
 
   subscriptionWidget.className = "subscription-widget";
   subscriptionStatusBadge.className = "subscription-badge";
+  renewSubscriptionBtn.className = "";
 
-  let note = "L'abbonamento risulta regolarmente attivo.";
+  let note = "Abbonamento attivo. Nessuna azione richiesta.";
   let badgeClass = "";
   let widgetClass = "";
+  let showRenewal = false;
 
   if(status === "sospeso" || status === "scaduto" || status === "disattivato"){
     badgeClass = "danger";
     widgetClass = "danger";
+    showRenewal = true;
     note = status === "sospeso"
-      ? "L'abbonamento è sospeso. Contatta il gestore per chiarimenti."
-      : "L'abbonamento non è attivo. Richiedi il rinnovo per continuare a utilizzare tutti i servizi.";
+      ? "Abbonamento sospeso. Contatta il gestore."
+      : "Abbonamento non attivo. Richiedi il rinnovo.";
   }else if(status === "in_attesa"){
     badgeClass = "warning";
     widgetClass = "warning";
-    note = "L'attivazione dell'abbonamento è ancora in attesa.";
+    note = "In attesa dell'attivazione da parte del gestore.";
   }else if(days !== null && days < 0){
     badgeClass = "danger";
     widgetClass = "danger";
-    note = "La data di scadenza è stata superata. Richiedi il rinnovo.";
+    showRenewal = true;
+    note = "Scadenza superata. Richiedi il rinnovo.";
   }else if(days !== null && days <= 30){
     badgeClass = "warning";
     widgetClass = "warning";
+    showRenewal = true;
     note = days === 0
       ? "L'abbonamento scade oggi."
-      : `L'abbonamento scadrà tra ${days} ${days === 1 ? "giorno" : "giorni"}.`;
+      : `Scadenza tra ${days} ${days === 1 ? "giorno" : "giorni"}.`;
   }else if(!subscription.dataScadenza){
     badgeClass = "warning";
     widgetClass = "warning";
-    note = "La data di scadenza non è ancora stata impostata dal gestore.";
+    note = "In attesa dell'impostazione della data di scadenza.";
   }
 
   if(widgetClass) subscriptionWidget.classList.add(widgetClass);
   if(badgeClass) subscriptionStatusBadge.classList.add(badgeClass);
+  if(showRenewal) renewSubscriptionBtn.classList.add("visible");
 
   subscriptionStatusBadge.textContent = subscriptionStatusLabel(status);
   subscriptionPlan.textContent = subscriptionPlanLabel(subscription.piano);
-  subscriptionExpiry.textContent = formatSubscriptionDate(subscription.dataScadenza);
+  subscriptionExpiry.textContent = subscription.dataScadenza
+    ? formatSubscriptionDate(subscription.dataScadenza)
+    : "Da definire";
+
   subscriptionDays.textContent = days === null
-    ? "Non calcolabili"
+    ? "In attesa di attivazione"
     : days < 0
       ? `Scaduto da ${Math.abs(days)} ${Math.abs(days) === 1 ? "giorno" : "giorni"}`
       : `${days} ${days === 1 ? "giorno" : "giorni"}`;
+
+  const progress = days === null
+    ? 0
+    : Math.max(0,Math.min(100,(days / Math.max(1,trialDays)) * 100));
+
+  subscriptionProgressBar.style.width = `${progress}%`;
   subscriptionRenewal.textContent = formatSubscriptionDate(subscription.ultimoRinnovo);
   subscriptionNote.textContent = subscription.note?.trim() || note;
 }
