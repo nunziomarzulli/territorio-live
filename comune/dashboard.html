@@ -26,7 +26,45 @@ header{height:76px;display:flex;align-items:center;justify-content:space-between
 .user-label{text-align:right;font-size:12px;color:#64717d;max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .header-btn{border:0;border-radius:9px;padding:10px 13px;font-weight:bold;cursor:pointer}
 #refreshBtn{background:#198754;color:#fff}
+#passwordBtn{background:#1565c0;color:#fff}
 #logoutBtn{background:#c62828;color:#fff}
+
+.password-modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:6000;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(0,0,0,.58);
+}
+.password-modal.open{display:flex}
+.password-card{
+  width:min(430px,100%);
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 18px 50px rgba(0,0,0,.28);
+  overflow:hidden;
+}
+.password-card-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:16px 18px;
+  border-bottom:1px solid #e2e7eb;
+}
+.password-card-header h2{margin:0;font-size:18px}
+.password-card-body{padding:18px}
+.password-card-body p{margin:0 0 14px;color:#5f6b75;font-size:13px;line-height:1.5}
+.password-actions{display:flex;gap:9px;margin-top:16px}
+.password-actions button{flex:1;border:0;border-radius:9px;padding:11px;font-weight:bold;cursor:pointer}
+#cancelPasswordBtn{background:#e8edf1;color:#26323b}
+#savePasswordBtn{background:#1565c0;color:#fff}
+.password-message{display:none;margin-top:12px;padding:10px;border-radius:8px;font-size:12px;line-height:1.4}
+.password-message.error{display:block;background:#fde8e8;color:#8a1c1c}
+.password-message.success{display:block;background:#e7f6ec;color:#176b36}
 
 main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:calc(100% - 76px)}
 #mapSection{position:relative;min-width:0;border-right:1px solid #d7dee5}
@@ -147,6 +185,7 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
     <div class="header-actions">
       <div id="userLabel" class="user-label"></div>
       <button id="refreshBtn" class="header-btn" type="button">↻ Aggiorna</button>
+      <button id="passwordBtn" class="header-btn" type="button">Cambia password</button>
       <button id="logoutBtn" class="header-btn" type="button">Esci</button>
     </div>
   </header>
@@ -198,6 +237,43 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
     </aside>
   </main>
 </div>
+
+<section id="passwordModal" class="password-modal" aria-hidden="true">
+  <div class="password-card" role="dialog" aria-modal="true" aria-labelledby="passwordTitle">
+    <div class="password-card-header">
+      <h2 id="passwordTitle">Cambia password</h2>
+      <button id="closePasswordBtn" class="close-btn" type="button" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="password-card-body">
+      <p>
+        Inserisci la password attuale e scegli una nuova password personale.
+        La nuova password deve contenere almeno 8 caratteri.
+      </p>
+
+      <div class="form-group">
+        <label for="currentPasswordInput">Password attuale</label>
+        <input id="currentPasswordInput" type="password" autocomplete="current-password">
+      </div>
+
+      <div class="form-group">
+        <label for="newPasswordInput">Nuova password</label>
+        <input id="newPasswordInput" type="password" autocomplete="new-password">
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPasswordInput">Conferma nuova password</label>
+        <input id="confirmPasswordInput" type="password" autocomplete="new-password">
+      </div>
+
+      <div id="passwordMessage" class="password-message" aria-live="polite"></div>
+
+      <div class="password-actions">
+        <button id="cancelPasswordBtn" type="button">Annulla</button>
+        <button id="savePasswordBtn" type="button">Salva nuova password</button>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section id="details" aria-hidden="true">
   <div class="details-header">
@@ -295,7 +371,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/fireba
 import {
   getAuth,
   onAuthStateChanged,
-  signOut
+  signOut,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 import {
   getFirestore,
@@ -330,7 +409,16 @@ const municipalityName = document.getElementById("municipalityName");
 const provinceName = document.getElementById("provinceName");
 const userLabel = document.getElementById("userLabel");
 const refreshBtn = document.getElementById("refreshBtn");
+const passwordBtn = document.getElementById("passwordBtn");
 const logoutBtn = document.getElementById("logoutBtn");
+const passwordModal = document.getElementById("passwordModal");
+const closePasswordBtn = document.getElementById("closePasswordBtn");
+const cancelPasswordBtn = document.getElementById("cancelPasswordBtn");
+const savePasswordBtn = document.getElementById("savePasswordBtn");
+const currentPasswordInput = document.getElementById("currentPasswordInput");
+const newPasswordInput = document.getElementById("newPasswordInput");
+const confirmPasswordInput = document.getElementById("confirmPasswordInput");
+const passwordMessage = document.getElementById("passwordMessage");
 const categoryFilter = document.getElementById("categoryFilter");
 const mapStatusFilter = document.getElementById("mapStatusFilter");
 const listCategoryFilter = document.getElementById("listCategoryFilter");
@@ -1219,6 +1307,116 @@ refreshBtn.addEventListener("click",() => {
   refreshBtn.textContent = "Aggiornato ✓";
   renderAll();
   setTimeout(() => refreshBtn.textContent = "↻ Aggiorna",1200);
+});
+
+function resetPasswordForm(){
+  currentPasswordInput.value = "";
+  newPasswordInput.value = "";
+  confirmPasswordInput.value = "";
+  passwordMessage.textContent = "";
+  passwordMessage.className = "password-message";
+}
+
+function openPasswordModal(){
+  resetPasswordForm();
+  passwordModal.classList.add("open");
+  passwordModal.setAttribute("aria-hidden","false");
+  setTimeout(() => currentPasswordInput.focus(),50);
+}
+
+function closePasswordModal(){
+  passwordModal.classList.remove("open");
+  passwordModal.setAttribute("aria-hidden","true");
+  resetPasswordForm();
+}
+
+function showPasswordMessage(message,type){
+  passwordMessage.textContent = message;
+  passwordMessage.className = `password-message ${type}`;
+}
+
+async function changeCurrentUserPassword(){
+  const user = auth.currentUser;
+  const currentPassword = currentPasswordInput.value;
+  const newPassword = newPasswordInput.value;
+  const confirmPassword = confirmPasswordInput.value;
+
+  if(!user?.email){
+    showPasswordMessage("Utente autenticato non valido.","error");
+    return;
+  }
+
+  if(!currentPassword || !newPassword || !confirmPassword){
+    showPasswordMessage("Compila tutti i campi.","error");
+    return;
+  }
+
+  if(newPassword.length < 8){
+    showPasswordMessage("La nuova password deve contenere almeno 8 caratteri.","error");
+    return;
+  }
+
+  if(newPassword !== confirmPassword){
+    showPasswordMessage("Le due nuove password non coincidono.","error");
+    return;
+  }
+
+  if(newPassword === currentPassword){
+    showPasswordMessage("La nuova password deve essere diversa da quella attuale.","error");
+    return;
+  }
+
+  savePasswordBtn.disabled = true;
+  savePasswordBtn.textContent = "Salvataggio...";
+
+  try{
+    const credential = EmailAuthProvider.credential(user.email,currentPassword);
+    await reauthenticateWithCredential(user,credential);
+    await updatePassword(user,newPassword);
+
+    showPasswordMessage("Password aggiornata correttamente.","success");
+
+    setTimeout(() => {
+      closePasswordModal();
+    },1400);
+  }catch(error){
+    console.error(error);
+
+    let message = "Impossibile aggiornare la password.";
+
+    if(
+      error.code === "auth/invalid-credential" ||
+      error.code === "auth/wrong-password"
+    ){
+      message = "La password attuale non è corretta.";
+    }else if(error.code === "auth/weak-password"){
+      message = "La nuova password è troppo debole.";
+    }else if(error.code === "auth/too-many-requests"){
+      message = "Troppi tentativi. Attendi qualche minuto e riprova.";
+    }else if(error.code === "auth/requires-recent-login"){
+      message = "Per sicurezza devi uscire e accedere nuovamente prima di cambiare la password.";
+    }
+
+    showPasswordMessage(message,"error");
+  }finally{
+    savePasswordBtn.disabled = false;
+    savePasswordBtn.textContent = "Salva nuova password";
+  }
+}
+
+passwordBtn.addEventListener("click",openPasswordModal);
+closePasswordBtn.addEventListener("click",closePasswordModal);
+cancelPasswordBtn.addEventListener("click",closePasswordModal);
+savePasswordBtn.addEventListener("click",changeCurrentUserPassword);
+
+passwordModal.addEventListener("click",event => {
+  if(event.target === passwordModal) closePasswordModal();
+});
+
+document.addEventListener("keydown",event => {
+  if(event.key === "Escape" && passwordModal.classList.contains("open")){
+    closePasswordModal();
+  }
 });
 
 logoutBtn.addEventListener("click",async () => {
