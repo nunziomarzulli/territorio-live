@@ -939,8 +939,10 @@ body.image-viewer-open{
         <div class="municipality-field">
           <label for="municipalityPlan">Piano</label>
           <select id="municipalityPlan">
-            <option value="prova">Prova gratuita</option>
-            <option value="abbonamento">Abbonamento</option>
+            <option value="trial">Trial gratuito</option>
+            <option value="base">Base</option>
+            <option value="premium">Premium</option>
+            <option value="enterprise">Enterprise</option>
             <option value="nessuno">Nessuno</option>
           </select>
         </div>
@@ -1888,7 +1890,7 @@ function resetMunicipalityForm(){
   municipalityForm.reset();
   municipalityDocumentId.value = "";
   municipalityStatus.value = "in_attesa";
-  municipalityPlan.value = "prova";
+  municipalityPlan.value = "trial";
   saveMunicipalityBtn.textContent = "Salva Comune";
   clearMunicipalityMessage();
 }
@@ -1917,6 +1919,83 @@ function formatMunicipalityDate(value){
   }
 }
 
+function normalizeSubscriptionPlan(value){
+  const plan = String(value || "").trim().toLowerCase();
+
+  if(plan === "prova"){
+    return "trial";
+  }
+
+  if(plan === "abbonamento"){
+    return "base";
+  }
+
+  if(
+    plan === "trial" ||
+    plan === "base" ||
+    plan === "premium" ||
+    plan === "enterprise" ||
+    plan === "nessuno"
+  ){
+    return plan;
+  }
+
+  return "trial";
+}
+
+function getMunicipalitySubscription(item){
+  const nestedSubscription =
+    item &&
+    typeof item.abbonamento === "object" &&
+    item.abbonamento !== null
+      ? item.abbonamento
+      : {};
+
+  return {
+    piano:normalizeSubscriptionPlan(
+      nestedSubscription.piano ||
+      item?.piano ||
+      "trial"
+    ),
+    stato:String(
+      nestedSubscription.stato ||
+      item?.stato ||
+      "in_attesa"
+    ),
+    dataAttivazione:
+      nestedSubscription.dataAttivazione ||
+      item?.dataAttivazione ||
+      null,
+    dataScadenza:
+      nestedSubscription.dataScadenza ||
+      item?.dataFineProva ||
+      null,
+    giorniTrial:Number(
+      nestedSubscription.giorniTrial ??
+      90
+    ),
+    ultimoRinnovo:
+      nestedSubscription.ultimoRinnovo ||
+      null,
+    note:String(
+      nestedSubscription.note ||
+      ""
+    )
+  };
+}
+
+function getPlanLabel(plan){
+  const labels = {
+    trial:"Trial",
+    base:"Base",
+    premium:"Premium",
+    enterprise:"Enterprise",
+    nessuno:"Nessuno"
+  };
+
+  return labels[normalizeSubscriptionPlan(plan)] || "Trial";
+}
+
 function renderMunicipalities(){
   municipalitiesCount.textContent = String(municipalities.length);
   municipalitiesCount.setAttribute(
@@ -1932,8 +2011,12 @@ function renderMunicipalities(){
   }
 
   municipalitiesList.innerHTML = municipalities.map(item => {
-    const status = String(item.stato || "in_attesa");
-    const trialEnd = item.dataFineProva ? formatMunicipalityDate(item.dataFineProva) : "-";
+    const subscription = getMunicipalitySubscription(item);
+    const status = subscription.stato;
+    const expirationDate = subscription.dataScadenza
+      ? formatMunicipalityDate(subscription.dataScadenza)
+      : "-";
+
     return `
       <div class="municipality-item">
         <div>
@@ -1942,11 +2025,11 @@ function renderMunicipalities(){
         </div>
         <div>
           <div>${escapeHtml(item.email || "-")}</div>
-          <div class="municipality-meta">UID: ${escapeHtml(item.uid || "non assegnato")}<br>Fine prova: ${escapeHtml(trialEnd)}</div>
+          <div class="municipality-meta">UID: ${escapeHtml(item.uid || "non assegnato")}<br>Scadenza: ${escapeHtml(expirationDate)}</div>
         </div>
         <div>
           <span class="municipality-status status-${escapeHtml(status)}">${escapeHtml(status.replaceAll("_"," "))}</span>
-          <div class="municipality-meta">Piano: ${escapeHtml(item.piano || "-")}</div>
+          <div class="municipality-meta">Piano: ${escapeHtml(getPlanLabel(subscription.piano))}</div>
         </div>
         <div class="municipality-actions">
           <button class="edit-municipality-btn" type="button" data-action="edit" data-id="${escapeHtml(item.id)}">Modifica</button>
@@ -1977,6 +2060,9 @@ async function loadMunicipalities(){
 function editMunicipality(id){
   const item = municipalities.find(entry => entry.id === id);
   if(!item) return;
+
+  const subscription = getMunicipalitySubscription(item);
+
   municipalityDocumentId.value = item.id;
   municipalityName.value = item.comune || "";
   municipalityProvince.value = item.provincia || "";
@@ -1985,8 +2071,8 @@ function editMunicipality(id){
   municipalityContact.value = item.referente || "";
   municipalityContactRole.value = item.ruoloReferente || "";
   municipalityUid.value = item.uid || "";
-  municipalityStatus.value = item.stato || "in_attesa";
-  municipalityPlan.value = item.piano || "prova";
+  municipalityStatus.value = subscription.stato;
+  municipalityPlan.value = subscription.piano;
   saveMunicipalityBtn.textContent = "Aggiorna Comune";
   clearMunicipalityMessage();
   municipalityName.focus();
@@ -2004,10 +2090,20 @@ async function activateMunicipality(id){
   endDate.setDate(endDate.getDate() + 90);
   try{
     await updateDoc(doc(db,"utentiComuni",id),{
+      "abbonamento.piano":"trial",
+      "abbonamento.stato":"attivo",
+      "abbonamento.dataAttivazione":serverTimestamp(),
+      "abbonamento.dataScadenza":endDate,
+      "abbonamento.giorniTrial":90,
+      "abbonamento.ultimoRinnovo":null,
+      "abbonamento.note":getMunicipalitySubscription(item).note,
+
+      /* Compatibilità temporanea con la struttura precedente. */
       stato:"attivo",
-      piano:"prova",
+      piano:"trial",
       dataAttivazione:serverTimestamp(),
       dataFineProva:endDate,
+
       aggiornatoAt:serverTimestamp(),
       aggiornatoDa:auth.currentUser?.email || "admin"
     });
@@ -2022,7 +2118,11 @@ async function disableMunicipality(id){
   if(!confirm("Vuoi disattivare l’accesso di questo Comune?")) return;
   try{
     await updateDoc(doc(db,"utentiComuni",id),{
+      "abbonamento.stato":"disattivato",
+
+      /* Compatibilità temporanea con la struttura precedente. */
       stato:"disattivato",
+
       aggiornatoAt:serverTimestamp(),
       aggiornatoDa:auth.currentUser?.email || "admin"
     });
@@ -2211,8 +2311,12 @@ municipalityForm.addEventListener("submit",async event => {
   saveMunicipalityBtn.textContent = "Salvataggio...";
 
   const previous = municipalities.find(item => item.id === documentId) || {};
+  const previousSubscription = getMunicipalitySubscription(previous);
+  const selectedPlan = normalizeSubscriptionPlan(municipalityPlan.value);
+  const selectedStatus = municipalityStatus.value;
 
   const data = {
+    idComune:documentId,
     comune:municipalityName.value.trim(),
     provincia:municipalityProvince.value.trim(),
     email:municipalityEmail.value.trim().toLowerCase(),
@@ -2221,11 +2325,24 @@ municipalityForm.addEventListener("submit",async event => {
     ruoloReferente:municipalityContactRole.value.trim(),
     uid:municipalityUid.value.trim(),
     ruolo:"comune",
-    stato:municipalityStatus.value,
-    piano:municipalityPlan.value,
+
+    abbonamento:{
+      piano:selectedPlan,
+      stato:selectedStatus,
+      dataAttivazione:previousSubscription.dataAttivazione,
+      dataScadenza:previousSubscription.dataScadenza,
+      giorniTrial:previousSubscription.giorniTrial || 90,
+      ultimoRinnovo:previousSubscription.ultimoRinnovo,
+      note:previousSubscription.note
+    },
+
+    /* Compatibilità temporanea con la struttura precedente. */
+    stato:selectedStatus,
+    piano:selectedPlan,
+    dataAttivazione:previousSubscription.dataAttivazione,
+    dataFineProva:previousSubscription.dataScadenza,
+
     dataRichiesta:previous.dataRichiesta || serverTimestamp(),
-    dataAttivazione:previous.dataAttivazione || null,
-    dataFineProva:previous.dataFineProva || null,
     creatoDa:previous.creatoDa || auth.currentUser?.email || "admin",
     aggiornatoAt:serverTimestamp(),
     aggiornatoDa:auth.currentUser?.email || "admin"
