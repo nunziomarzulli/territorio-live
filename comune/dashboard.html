@@ -301,6 +301,7 @@ import {
   getFirestore,
   collection,
   doc,
+  getDocs,
   onSnapshot,
   query,
   where,
@@ -1225,21 +1226,112 @@ logoutBtn.addEventListener("click",async () => {
   window.location.replace("./login.html");
 });
 
-async function loadMunicipalProfile(user){
-  /*
-    V1 DI PROVA
-    Per testare subito la dashboard, l'account autenticato viene associato
-    temporaneamente al Comune di Adelfia.
+function normalizeSubscriptionPlan(value){
+  const plan = String(value || "").trim().toLowerCase();
 
-    Nella fase successiva questo blocco verrà sostituito con il profilo
-    protetto salvato nella raccolta Firestore "utentiComuni".
-  */
+  if(plan === "prova") return "trial";
+  if(plan === "abbonamento") return "base";
+
+  if(
+    plan === "trial" ||
+    plan === "base" ||
+    plan === "premium" ||
+    plan === "enterprise" ||
+    plan === "nessuno"
+  ){
+    return plan;
+  }
+
+  return "trial";
+}
+
+function normalizeMunicipalSubscription(profile){
+  const subscription =
+    profile &&
+    typeof profile.abbonamento === "object" &&
+    profile.abbonamento !== null
+      ? profile.abbonamento
+      : {};
+
   return {
+    piano:normalizeSubscriptionPlan(
+      subscription.piano ||
+      profile?.piano ||
+      "trial"
+    ),
+    stato:String(
+      subscription.stato ||
+      profile?.stato ||
+      "in_attesa"
+    ),
+    dataAttivazione:
+      subscription.dataAttivazione ||
+      profile?.dataAttivazione ||
+      null,
+    dataScadenza:
+      subscription.dataScadenza ||
+      profile?.dataFineProva ||
+      null,
+    giorniTrial:Number(
+      subscription.giorniTrial ??
+      90
+    ),
+    ultimoRinnovo:
+      subscription.ultimoRinnovo ||
+      null,
+    note:String(
+      subscription.note ||
+      ""
+    )
+  };
+}
+
+async function loadMunicipalProfile(user){
+  if(!user?.uid){
+    throw new Error("Utente Firebase non valido.");
+  }
+
+  const profileQuery = query(
+    collection(db,"utentiComuni"),
+    where("uid","==",user.uid)
+  );
+
+  const snapshot = await getDocs(profileQuery);
+
+  if(snapshot.empty){
+    throw new Error(
+      "Nessun profilo comunale associato a questo account. " +
+      "Verifica che il campo UID sia stato salvato nella Gestione Comuni."
+    );
+  }
+
+  if(snapshot.size > 1){
+    throw new Error(
+      "Sono presenti più profili comunali associati allo stesso account. " +
+      "Controlla la raccolta utentiComuni."
+    );
+  }
+
+  const profileDocument = snapshot.docs[0];
+  const profileData = profileDocument.data();
+
+  if(String(profileData.ruolo || "").toLowerCase() !== "comune"){
+    throw new Error("Questo account non dispone del ruolo Comune.");
+  }
+
+  if(!String(profileData.comune || "").trim()){
+    throw new Error("Il profilo comunale non contiene il nome del Comune.");
+  }
+
+  return {
+    id:profileDocument.id,
+    ...profileData,
+    uid:user.uid,
+    email:profileData.email || user.email || "",
     ruolo:"comune",
-    comune:"Adelfia",
-    provincia:"Bari",
-    attivo:true,
-    email:user.email || ""
+    comune:String(profileData.comune).trim(),
+    provincia:String(profileData.provincia || "").trim(),
+    abbonamento:normalizeMunicipalSubscription(profileData)
   };
 }
 
