@@ -683,6 +683,22 @@ body.image-viewer-open{
 #saveMunicipalityBtn{background:#2e7d32}
 #resetMunicipalityFormBtn{background:#555}
 
+.municipality-section-title{
+  grid-column:1 / -1;
+  margin:6px 0 0;
+  padding-top:14px;
+  border-top:1px solid #333;
+  color:#39d353;
+  font-size:15px;
+}
+
+.municipality-help{
+  margin-top:3px;
+  color:#888;
+  font-size:11px;
+  line-height:1.4;
+}
+
 #municipalityMessage{
   min-height:22px;
   margin:13px 0;
@@ -947,6 +963,77 @@ body.image-viewer-open{
           </select>
         </div>
 
+        <h3 class="municipality-section-title">Gestione amministrativa e pagamento</h3>
+
+        <div class="municipality-field">
+          <label for="municipalityPopulation">Popolazione residente</label>
+          <input id="municipalityPopulation" type="number" min="0" step="1" placeholder="Es. 17000">
+          <div class="municipality-help">Serve a verificare la fascia commerciale assegnata.</div>
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityBillingFrequency">Fatturazione</label>
+          <select id="municipalityBillingFrequency">
+            <option value="annuale_anticipata">Annuale anticipata</option>
+            <option value="mensile">Mensile</option>
+            <option value="da_definire">Da definire</option>
+          </select>
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityAdministrativeStatus">Stato amministrativo</label>
+          <select id="municipalityAdministrativeStatus">
+            <option value="richiesta_ricevuta">Richiesta ricevuta</option>
+            <option value="preventivo_inviato">Preventivo inviato</option>
+            <option value="affidamento_in_corso">Affidamento in corso</option>
+            <option value="ordine_ricevuto">Ordine / determina ricevuta</option>
+            <option value="da_fatturare">Da fatturare</option>
+            <option value="fattura_emessa">Fattura emessa</option>
+            <option value="pagato">Pagato</option>
+            <option value="insoluto">Insoluto</option>
+          </select>
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityInvoiceStatus">Stato pagamento</label>
+          <select id="municipalityInvoiceStatus">
+            <option value="non_fatturato">Non fatturato</option>
+            <option value="in_attesa">In attesa di pagamento</option>
+            <option value="pagato">Pagato</option>
+            <option value="scaduto">Scaduto</option>
+          </select>
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityCig">CIG</label>
+          <input id="municipalityCig" type="text" placeholder="Codice identificativo gara">
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityUniqueCode">Codice univoco ufficio</label>
+          <input id="municipalityUniqueCode" type="text" placeholder="Es. ABC123">
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityOrderReference">Determina / ordine</label>
+          <input id="municipalityOrderReference" type="text" placeholder="Numero e data dell’atto">
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityInvoiceNumber">Numero fattura</label>
+          <input id="municipalityInvoiceNumber" type="text" placeholder="Es. 12/2026">
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityInvoiceDate">Data fattura</label>
+          <input id="municipalityInvoiceDate" type="date">
+        </div>
+
+        <div class="municipality-field">
+          <label for="municipalityPaymentDate">Data pagamento</label>
+          <input id="municipalityPaymentDate" type="date">
+        </div>
+
         <div class="municipality-form-actions">
           <button id="resetMunicipalityFormBtn" type="button">Pulisci</button>
           <button id="saveMunicipalityBtn" type="submit">Salva Comune</button>
@@ -1064,6 +1151,16 @@ const municipalityContactRole = document.getElementById("municipalityContactRole
 const municipalityUid = document.getElementById("municipalityUid");
 const municipalityStatus = document.getElementById("municipalityStatus");
 const municipalityPlan = document.getElementById("municipalityPlan");
+const municipalityPopulation = document.getElementById("municipalityPopulation");
+const municipalityBillingFrequency = document.getElementById("municipalityBillingFrequency");
+const municipalityAdministrativeStatus = document.getElementById("municipalityAdministrativeStatus");
+const municipalityInvoiceStatus = document.getElementById("municipalityInvoiceStatus");
+const municipalityCig = document.getElementById("municipalityCig");
+const municipalityUniqueCode = document.getElementById("municipalityUniqueCode");
+const municipalityOrderReference = document.getElementById("municipalityOrderReference");
+const municipalityInvoiceNumber = document.getElementById("municipalityInvoiceNumber");
+const municipalityInvoiceDate = document.getElementById("municipalityInvoiceDate");
+const municipalityPaymentDate = document.getElementById("municipalityPaymentDate");
 const resetMunicipalityFormBtn = document.getElementById("resetMunicipalityFormBtn");
 const saveMunicipalityBtn = document.getElementById("saveMunicipalityBtn");
 const municipalityMessage = document.getElementById("municipalityMessage");
@@ -1891,6 +1988,9 @@ function resetMunicipalityForm(){
   municipalityDocumentId.value = "";
   municipalityStatus.value = "in_attesa";
   municipalityPlan.value = "trial";
+  municipalityBillingFrequency.value = "annuale_anticipata";
+  municipalityAdministrativeStatus.value = "richiesta_ricevuta";
+  municipalityInvoiceStatus.value = "non_fatturato";
   saveMunicipalityBtn.textContent = "Salva Comune";
   clearMunicipalityMessage();
 }
@@ -1916,6 +2016,17 @@ function formatMunicipalityDate(value){
     return date.toLocaleDateString("it-IT");
   }catch(error){
     return "-";
+  }
+}
+
+function formatDateInputValue(value){
+  if(!value) return "";
+  try{
+    const date = typeof value.toDate === "function" ? value.toDate() : new Date(value);
+    if(Number.isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0,10);
+  }catch(error){
+    return "";
   }
 }
 
@@ -1988,7 +2099,17 @@ function getMunicipalitySubscription(item){
     note:String(
       nestedSubscription.note ||
       ""
-    )
+    ),
+    popolazione:Number(nestedSubscription.popolazione ?? item?.popolazione ?? 0),
+    fatturazione:String(nestedSubscription.fatturazione || "annuale_anticipata"),
+    statoAmministrativo:String(nestedSubscription.statoAmministrativo || "richiesta_ricevuta"),
+    statoPagamento:String(nestedSubscription.statoPagamento || "non_fatturato"),
+    cig:String(nestedSubscription.cig || ""),
+    codiceUnivoco:String(nestedSubscription.codiceUnivoco || ""),
+    riferimentoOrdine:String(nestedSubscription.riferimentoOrdine || ""),
+    numeroFattura:String(nestedSubscription.numeroFattura || ""),
+    dataFattura:nestedSubscription.dataFattura || null,
+    dataPagamento:nestedSubscription.dataPagamento || null
   };
 }
 
@@ -2037,7 +2158,7 @@ function renderMunicipalities(){
         </div>
         <div>
           <span class="municipality-status status-${escapeHtml(status)}">${escapeHtml(status.replaceAll("_"," "))}</span>
-          <div class="municipality-meta">Piano: ${escapeHtml(getPlanLabel(subscription.piano))}</div>
+          <div class="municipality-meta">Piano: ${escapeHtml(getPlanLabel(subscription.piano))}<br>Amministrazione: ${escapeHtml(subscription.statoAmministrativo.replaceAll("_"," "))}<br>Pagamento: ${escapeHtml(subscription.statoPagamento.replaceAll("_"," "))}</div>
         </div>
         <div class="municipality-actions">
           <button class="edit-municipality-btn" type="button" data-action="edit" data-id="${escapeHtml(item.id)}">Modifica</button>
@@ -2081,6 +2202,16 @@ function editMunicipality(id){
   municipalityUid.value = item.uid || "";
   municipalityStatus.value = subscription.stato;
   municipalityPlan.value = subscription.piano;
+  municipalityPopulation.value = subscription.popolazione || "";
+  municipalityBillingFrequency.value = subscription.fatturazione || "annuale_anticipata";
+  municipalityAdministrativeStatus.value = subscription.statoAmministrativo || "richiesta_ricevuta";
+  municipalityInvoiceStatus.value = subscription.statoPagamento || "non_fatturato";
+  municipalityCig.value = subscription.cig || "";
+  municipalityUniqueCode.value = subscription.codiceUnivoco || "";
+  municipalityOrderReference.value = subscription.riferimentoOrdine || "";
+  municipalityInvoiceNumber.value = subscription.numeroFattura || "";
+  municipalityInvoiceDate.value = subscription.dataFattura ? formatDateInputValue(subscription.dataFattura) : "";
+  municipalityPaymentDate.value = subscription.dataPagamento ? formatDateInputValue(subscription.dataPagamento) : "";
   saveMunicipalityBtn.textContent = "Aggiorna Comune";
   clearMunicipalityMessage();
   municipalityName.focus();
@@ -2366,7 +2497,17 @@ municipalityForm.addEventListener("submit",async event => {
       dataScadenza:expirationDate,
       giorniTrial:90,
       ultimoRinnovo:lastRenewalDate,
-      note:previousSubscription.note
+      note:previousSubscription.note,
+      popolazione:Number(municipalityPopulation.value || 0),
+      fatturazione:municipalityBillingFrequency.value,
+      statoAmministrativo:municipalityAdministrativeStatus.value,
+      statoPagamento:municipalityInvoiceStatus.value,
+      cig:municipalityCig.value.trim(),
+      codiceUnivoco:municipalityUniqueCode.value.trim(),
+      riferimentoOrdine:municipalityOrderReference.value.trim(),
+      numeroFattura:municipalityInvoiceNumber.value.trim(),
+      dataFattura:municipalityInvoiceDate.value || null,
+      dataPagamento:municipalityPaymentDate.value || null
     },
 
     /* Compatibilità temporanea con la struttura precedente. */
