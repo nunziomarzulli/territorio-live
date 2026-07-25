@@ -265,20 +265,24 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
   overflow:hidden;
   text-overflow:ellipsis;
 }
-#renewSubscriptionBtn{
+#renewSubscriptionBtn,
+#cancelSubscriptionBtn{
   display:none;
   border:0;
   border-radius:7px;
   padding:6px 9px;
-  background:#1565c0;
   color:#fff;
   font-size:10px;
   font-weight:bold;
   cursor:pointer;
   white-space:nowrap;
 }
-#renewSubscriptionBtn.visible{display:inline-block}
-#renewSubscriptionBtn:hover{filter:brightness(.95)}
+#renewSubscriptionBtn{background:#1565c0}
+#cancelSubscriptionBtn{background:#b23a32}
+#renewSubscriptionBtn.visible,
+#cancelSubscriptionBtn.visible{display:inline-block}
+#renewSubscriptionBtn:hover,
+#cancelSubscriptionBtn:hover{filter:brightness(.95)}
 
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid #dfe5ea}
 .tab{border:0;background:#fff;padding:15px 6px;font-size:12px;font-weight:bold;cursor:pointer;border-bottom:3px solid transparent}
@@ -447,6 +451,7 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
             <span id="subscriptionPlan" class="subscription-plan">-</span>
             <span id="subscriptionStatusBadge" class="subscription-badge">Caricamento...</span>
             <button id="renewSubscriptionBtn" type="button">Richiedi rinnovo</button>
+            <button id="cancelSubscriptionBtn" type="button">Richiedi annullamento</button>
           </div>
         </div>
 
@@ -728,6 +733,7 @@ const subscriptionRenewal = document.getElementById("subscriptionRenewal");
 const subscriptionNote = document.getElementById("subscriptionNote");
 const subscriptionProgressBar = document.getElementById("subscriptionProgressBar");
 const renewSubscriptionBtn = document.getElementById("renewSubscriptionBtn");
+const cancelSubscriptionBtn = document.getElementById("cancelSubscriptionBtn");
 const details = document.getElementById("details");
 const detailTitle = document.getElementById("detailTitle");
 const detailSubtitle = document.getElementById("detailSubtitle");
@@ -1942,6 +1948,7 @@ function renderSubscriptionWidget(){
   subscriptionWidget.className = "subscription-widget";
   subscriptionStatusBadge.className = "subscription-badge";
   renewSubscriptionBtn.className = "";
+  cancelSubscriptionBtn.className = "";
 
   let note = "Abbonamento attivo. Nessuna azione richiesta.";
   let badgeClass = "";
@@ -1980,6 +1987,14 @@ function renderSubscriptionWidget(){
   if(widgetClass) subscriptionWidget.classList.add(widgetClass);
   if(badgeClass) subscriptionStatusBadge.classList.add(badgeClass);
   if(showRenewal) renewSubscriptionBtn.classList.add("visible");
+
+  const isOperationallyActive =
+    (status === "attivo" || status === "trial") &&
+    (days === null || days >= 0);
+
+  if(isOperationallyActive){
+    cancelSubscriptionBtn.classList.add("visible");
+  }
 
   subscriptionStatusBadge.textContent = subscriptionStatusLabel(status);
   subscriptionPlan.textContent = subscriptionPlanLabel(subscription.piano);
@@ -2025,7 +2040,41 @@ function requestSubscriptionRenewal(){
     `mailto:info@territoriolive.it?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
+function requestSubscriptionCancellation(){
+  if(!currentProfile) return;
+
+  const subscription = currentProfile.abbonamento || {};
+
+  const confirmed = confirm(
+    "Vuoi preparare la richiesta di annullamento dell’abbonamento?\n\n" +
+    "L’accesso non verrà disattivato automaticamente: la richiesta sarà inviata al gestore."
+  );
+
+  if(!confirmed) return;
+
+  const subject = `Richiesta annullamento Dashboard Comune - ${currentProfile.comune}`;
+  const body = [
+    "Buongiorno,",
+    "",
+    `il Comune di ${currentProfile.comune} richiede l’annullamento dell’abbonamento alla Dashboard Comune di Territorio Live.`,
+    "",
+    `Piano attuale: ${subscriptionPlanLabel(subscription.piano)}`,
+    `Stato attuale: ${subscriptionStatusLabel(subscription.stato)}`,
+    `Scadenza: ${formatSubscriptionDate(subscription.dataScadenza)}`,
+    `Referente: ${currentProfile.referente || "-"}`,
+    `Email account: ${currentProfile.email || auth.currentUser?.email || "-"}`,
+    "",
+    "La richiesta dovrà essere verificata e confermata dal gestore.",
+    "",
+    "Cordiali saluti."
+  ].join("\n");
+
+  window.location.href =
+    `mailto:info@territoriolive.it?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 renewSubscriptionBtn.addEventListener("click",requestSubscriptionRenewal);
+cancelSubscriptionBtn.addEventListener("click",requestSubscriptionCancellation);
 blockedRenewBtn.addEventListener("click",requestSubscriptionRenewal);
 blockedPasswordBtn.addEventListener("click",openPasswordModal);
 blockedLogoutBtn.addEventListener("click",async () => {
