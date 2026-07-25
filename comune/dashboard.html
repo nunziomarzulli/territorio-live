@@ -661,21 +661,21 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
 <section id="plansModal" class="plans-modal" aria-hidden="true">
   <div class="plans-card" role="dialog" aria-modal="true" aria-labelledby="plansTitle">
     <div class="plans-header">
-      <h2 id="plansTitle">Piani Territorio Live</h2>
+      <h2 id="plansTitle">Abbonamento Comuni</h2>
       <button id="closePlansBtn" class="close-btn" type="button" aria-label="Chiudi">✕</button>
     </div>
 
     <div class="plans-body">
       <p class="plans-intro">
-        Confronta il piano attuale con le soluzioni disponibili. La richiesta non modifica automaticamente l’abbonamento:
-        sarà verificata dal gestore.
+        Tutte le fasce includono le stesse funzionalità della Dashboard Comune. La tariffa varia esclusivamente
+        in base alla popolazione residente del Comune. La richiesta sarà verificata dal gestore.
       </p>
 
       <div id="plansGrid" class="plans-grid"></div>
 
       <div class="plans-note">
-        Prezzi e modalità di pagamento sono configurabili. Per i Comuni potranno essere previste formule mensili,
-        annuali, fattura e altre modalità compatibili con la Pubblica Amministrazione.
+        È disponibile anche la fatturazione annuale e possono essere concordate modalità di pagamento compatibili
+        con la Pubblica Amministrazione.
       </div>
     </div>
   </div>
@@ -1895,54 +1895,42 @@ logoutBtn.addEventListener("click",async () => {
   window.location.replace("./login.html");
 });
 
+const COMMON_SUBSCRIPTION_FEATURES = [
+  "Accesso completo alla Dashboard Comune",
+  "Gestione delle segnalazioni",
+  "Aggiornamento degli stati e delle priorità",
+  "Foto prima e dopo l’intervento",
+  "Storico e PDF degli interventi conclusi"
+];
+
 const SUBSCRIPTION_PLANS = {
   trial:{
     label:"Trial gratuito",
     priceLabel:"Gratuito",
     priceDetail:"90 giorni",
-    features:[
-      "Accesso completo alla Dashboard Comune",
-      "Gestione delle segnalazioni",
-      "Foto prima e dopo l’intervento",
-      "PDF degli interventi conclusi",
-      "1 operatore"
-    ]
+    populationLabel:"Periodo iniziale di prova",
+    features:[...COMMON_SUBSCRIPTION_FEATURES]
   },
-  base:{
-    label:"Piano Base",
-    priceLabel:"Da definire",
-    priceDetail:"mensile o annuale",
-    features:[
-      "Gestione ordinaria delle segnalazioni",
-      "Aggiornamento degli stati",
-      "Chiusura con foto finale",
-      "Storico degli interventi",
-      "1 operatore"
-    ]
+  piccoli_comuni:{
+    label:"Piccoli Comuni",
+    priceLabel:"39,90 €",
+    priceDetail:"al mese",
+    populationLabel:"Fino a 5.000 abitanti",
+    features:[...COMMON_SUBSCRIPTION_FEATURES]
   },
-  premium:{
-    label:"Piano Premium",
-    priceLabel:"Da definire",
-    priceDetail:"mensile o annuale",
-    features:[
-      "Tutte le funzioni del Piano Base",
-      "Più operatori comunali",
-      "Statistiche avanzate",
-      "Report PDF completi",
-      "Priorità e tracciamento operativo"
-    ]
+  comuni_medi:{
+    label:"Comuni medi",
+    priceLabel:"69,90 €",
+    priceDetail:"al mese",
+    populationLabel:"Da 5.001 a 50.000 abitanti",
+    features:[...COMMON_SUBSCRIPTION_FEATURES]
   },
-  enterprise:{
-    label:"Piano Enterprise",
-    priceLabel:"Preventivo",
-    priceDetail:"annuale",
-    features:[
-      "Tutte le funzioni del Piano Premium",
-      "Operatori personalizzabili",
-      "Configurazioni dedicate",
-      "Supporto prioritario",
-      "Gestione amministrativa su misura"
-    ]
+  grandi_comuni:{
+    label:"Grandi Comuni",
+    priceLabel:"99,90 €",
+    priceDetail:"al mese",
+    populationLabel:"Oltre 50.000 abitanti",
+    features:[...COMMON_SUBSCRIPTION_FEATURES]
   }
 };
 
@@ -1950,13 +1938,15 @@ function normalizeSubscriptionPlan(value){
   const plan = String(value || "").trim().toLowerCase();
 
   if(plan === "prova") return "trial";
-  if(plan === "abbonamento") return "base";
+  if(plan === "abbonamento" || plan === "base") return "piccoli_comuni";
+  if(plan === "premium") return "comuni_medi";
+  if(plan === "enterprise") return "grandi_comuni";
 
   if(
     plan === "trial" ||
-    plan === "base" ||
-    plan === "premium" ||
-    plan === "enterprise" ||
+    plan === "piccoli_comuni" ||
+    plan === "comuni_medi" ||
+    plan === "grandi_comuni" ||
     plan === "nessuno"
   ){
     return plan;
@@ -2009,10 +1999,10 @@ function normalizeMunicipalSubscription(profile){
 function subscriptionPlanLabel(plan){
   const labels = {
     trial:"Trial gratuito",
-    base:"Piano Base",
-    premium:"Piano Premium",
-    enterprise:"Piano Enterprise",
-    nessuno:"Nessun piano"
+    piccoli_comuni:"Piccoli Comuni — fino a 5.000 abitanti",
+    comuni_medi:"Comuni medi — da 5.001 a 50.000 abitanti",
+    grandi_comuni:"Grandi Comuni — oltre 50.000 abitanti",
+    nessuno:"Nessun abbonamento"
   };
   return labels[String(plan || "").toLowerCase()] || "Piano non definito";
 }
@@ -2239,6 +2229,9 @@ function renderPlansModal(){
       <article class="plan-card ${isCurrent ? "current" : ""}">
         ${isCurrent ? `<span class="plan-current-label">Piano attuale</span>` : ""}
         <h3>${escapeHtml(plan.label)}</h3>
+        <div style="margin-bottom:8px;color:#4f5c67;font-size:12px;font-weight:700">
+          ${escapeHtml(plan.populationLabel)}
+        </div>
         <div class="plan-price">
           ${escapeHtml(plan.priceLabel)}
           <small>${escapeHtml(plan.priceDetail)}</small>
@@ -2251,7 +2244,7 @@ function renderPlansModal(){
           type="button"
           data-plan="${escapeHtml(planId)}"
           ${isCurrent ? "disabled" : ""}>
-          ${isCurrent ? "Piano attuale" : "Richiedi questo piano"}
+          ${isCurrent ? "Abbonamento attuale" : (planId === "trial" ? "Richiedi il trial" : "Richiedi attivazione")}
         </button>
       </article>
     `;
@@ -2286,15 +2279,15 @@ function requestPlanChange(planId){
   const body = [
     "Buongiorno,",
     "",
-    `il Comune di ${currentProfile.comune} richiede informazioni per passare al piano ${requestedPlan.label} di Territorio Live.`,
+    `il Comune di ${currentProfile.comune} richiede l’attivazione della fascia ${requestedPlan.label} di Territorio Live.`,
     "",
-    `Piano attuale: ${subscriptionPlanLabel(currentSubscription.piano)}`,
-    `Piano richiesto: ${requestedPlan.label}`,
-    `Prezzo indicato: ${requestedPlan.priceLabel} (${requestedPlan.priceDetail})`,
+    `Abbonamento attuale: ${subscriptionPlanLabel(currentSubscription.piano)}`,
+    `Fascia richiesta: ${requestedPlan.label} — ${requestedPlan.populationLabel}`,
+    `Canone indicato: ${requestedPlan.priceLabel} ${requestedPlan.priceDetail}`,
     `Referente: ${currentProfile.referente || "-"}`,
     `Email account: ${currentProfile.email || auth.currentUser?.email || "-"}`,
     "",
-    "Si richiedono conferma delle condizioni economiche e delle modalità amministrative di pagamento.",
+    "Si richiedono conferma dell’attivazione e indicazioni sulle modalità amministrative di pagamento.",
     "",
     "Cordiali saluti."
   ].join("\n");
