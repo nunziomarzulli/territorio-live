@@ -939,11 +939,11 @@ body.image-viewer-open{
         <div class="municipality-field">
           <label for="municipalityPlan">Piano</label>
           <select id="municipalityPlan">
-            <option value="trial">Trial gratuito</option>
-            <option value="base">Base</option>
-            <option value="premium">Premium</option>
-            <option value="enterprise">Enterprise</option>
-            <option value="nessuno">Nessuno</option>
+            <option value="trial">Trial gratuito — 90 giorni</option>
+            <option value="piccoli_comuni">Piccoli Comuni — fino a 5.000 abitanti — 39,90 €/mese</option>
+            <option value="comuni_medi">Comuni medi — da 5.001 a 50.000 abitanti — 69,90 €/mese</option>
+            <option value="grandi_comuni">Grandi Comuni — oltre 50.000 abitanti — 99,90 €/mese</option>
+            <option value="nessuno">Nessun abbonamento</option>
           </select>
         </div>
 
@@ -1926,15 +1926,23 @@ function normalizeSubscriptionPlan(value){
     return "trial";
   }
 
-  if(plan === "abbonamento"){
-    return "base";
+  if(plan === "abbonamento" || plan === "base"){
+    return "piccoli_comuni";
+  }
+
+  if(plan === "premium"){
+    return "comuni_medi";
+  }
+
+  if(plan === "enterprise"){
+    return "grandi_comuni";
   }
 
   if(
     plan === "trial" ||
-    plan === "base" ||
-    plan === "premium" ||
-    plan === "enterprise" ||
+    plan === "piccoli_comuni" ||
+    plan === "comuni_medi" ||
+    plan === "grandi_comuni" ||
     plan === "nessuno"
   ){
     return plan;
@@ -1986,11 +1994,11 @@ function getMunicipalitySubscription(item){
 
 function getPlanLabel(plan){
   const labels = {
-    trial:"Trial",
-    base:"Base",
-    premium:"Premium",
-    enterprise:"Enterprise",
-    nessuno:"Nessuno"
+    trial:"Trial gratuito — 90 giorni",
+    piccoli_comuni:"Piccoli Comuni — fino a 5.000 abitanti — 39,90 €/mese",
+    comuni_medi:"Comuni medi — da 5.001 a 50.000 abitanti — 69,90 €/mese",
+    grandi_comuni:"Grandi Comuni — oltre 50.000 abitanti — 99,90 €/mese",
+    nessuno:"Nessun abbonamento"
   };
 
   return labels[normalizeSubscriptionPlan(plan)] || "Trial";
