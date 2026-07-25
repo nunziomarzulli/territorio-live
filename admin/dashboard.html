@@ -2086,22 +2086,24 @@ async function activateMunicipality(id){
     editMunicipality(id);
     return;
   }
-  const endDate = new Date();
+  const activationDate = new Date();
+  const endDate = new Date(activationDate);
   endDate.setDate(endDate.getDate() + 90);
+
   try{
     await updateDoc(doc(db,"utentiComuni",id),{
       "abbonamento.piano":"trial",
       "abbonamento.stato":"attivo",
-      "abbonamento.dataAttivazione":serverTimestamp(),
+      "abbonamento.dataAttivazione":activationDate,
       "abbonamento.dataScadenza":endDate,
       "abbonamento.giorniTrial":90,
-      "abbonamento.ultimoRinnovo":null,
+      "abbonamento.ultimoRinnovo":activationDate,
       "abbonamento.note":getMunicipalitySubscription(item).note,
 
       /* Compatibilità temporanea con la struttura precedente. */
       stato:"attivo",
       piano:"trial",
-      dataAttivazione:serverTimestamp(),
+      dataAttivazione:activationDate,
       dataFineProva:endDate,
 
       aggiornatoAt:serverTimestamp(),
@@ -2315,6 +2317,29 @@ municipalityForm.addEventListener("submit",async event => {
   const selectedPlan = normalizeSubscriptionPlan(municipalityPlan.value);
   const selectedStatus = municipalityStatus.value;
 
+  const isNewActiveTrial =
+    !existingId &&
+    selectedPlan === "trial" &&
+    selectedStatus === "attivo";
+
+  const activationDate = isNewActiveTrial
+    ? new Date()
+    : previousSubscription.dataAttivazione;
+
+  const expirationDate = (() => {
+    if(!isNewActiveTrial){
+      return previousSubscription.dataScadenza;
+    }
+
+    const date = new Date(activationDate);
+    date.setDate(date.getDate() + 90);
+    return date;
+  })();
+
+  const lastRenewalDate = isNewActiveTrial
+    ? activationDate
+    : previousSubscription.ultimoRinnovo;
+
   const data = {
     idComune:documentId,
     comune:municipalityName.value.trim(),
@@ -2329,18 +2354,18 @@ municipalityForm.addEventListener("submit",async event => {
     abbonamento:{
       piano:selectedPlan,
       stato:selectedStatus,
-      dataAttivazione:previousSubscription.dataAttivazione,
-      dataScadenza:previousSubscription.dataScadenza,
-      giorniTrial:previousSubscription.giorniTrial || 90,
-      ultimoRinnovo:previousSubscription.ultimoRinnovo,
+      dataAttivazione:activationDate,
+      dataScadenza:expirationDate,
+      giorniTrial:90,
+      ultimoRinnovo:lastRenewalDate,
       note:previousSubscription.note
     },
 
     /* Compatibilità temporanea con la struttura precedente. */
     stato:selectedStatus,
     piano:selectedPlan,
-    dataAttivazione:previousSubscription.dataAttivazione,
-    dataFineProva:previousSubscription.dataScadenza,
+    dataAttivazione:activationDate,
+    dataFineProva:expirationDate,
 
     dataRichiesta:previous.dataRichiesta || serverTimestamp(),
     creatoDa:previous.creatoDa || auth.currentUser?.email || "admin",
