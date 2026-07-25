@@ -284,6 +284,137 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
 #renewSubscriptionBtn:hover,
 #cancelSubscriptionBtn:hover{filter:brightness(.95)}
 
+#subscriptionPlan{
+  border:0;
+  padding:0;
+  background:transparent;
+  color:#17202a;
+  text-decoration:underline;
+  text-decoration-style:dotted;
+  text-underline-offset:3px;
+  cursor:pointer;
+}
+#subscriptionPlan:hover{color:#1565c0}
+
+.plans-modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:6200;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(0,0,0,.62);
+}
+.plans-modal.open{display:flex}
+.plans-card{
+  width:min(980px,100%);
+  max-height:92vh;
+  overflow:auto;
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+.plans-header{
+  position:sticky;
+  top:0;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:17px 19px;
+  border-bottom:1px solid #e1e7ec;
+  background:#fff;
+}
+.plans-header h2{margin:0;font-size:20px}
+.plans-body{padding:18px}
+.plans-intro{
+  margin:0 0 16px;
+  color:#5f6b75;
+  font-size:13px;
+  line-height:1.5;
+}
+.plans-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+}
+.plan-card{
+  display:flex;
+  flex-direction:column;
+  min-height:310px;
+  padding:15px;
+  border:1px solid #dce3e9;
+  border-radius:13px;
+  background:#fafcfd;
+}
+.plan-card.current{
+  border-color:#1f9d55;
+  box-shadow:0 0 0 2px rgba(31,157,85,.12);
+}
+.plan-card h3{margin:0 0 6px;font-size:17px}
+.plan-price{
+  margin-bottom:12px;
+  color:#1565c0;
+  font-size:18px;
+  font-weight:800;
+}
+.plan-price small{
+  color:#677480;
+  font-size:11px;
+  font-weight:normal;
+}
+.plan-features{
+  flex:1;
+  margin:0;
+  padding-left:18px;
+  color:#46535e;
+  font-size:12px;
+  line-height:1.65;
+}
+.plan-current-label{
+  display:inline-block;
+  align-self:flex-start;
+  margin-bottom:9px;
+  padding:4px 8px;
+  border-radius:999px;
+  background:#e7f6ec;
+  color:#176b36;
+  font-size:10px;
+  font-weight:bold;
+}
+.plan-action{
+  margin-top:14px;
+  border:0;
+  border-radius:9px;
+  padding:10px;
+  background:#1565c0;
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+}
+.plan-action:disabled{
+  background:#cfd7de;
+  color:#65727d;
+  cursor:not-allowed;
+}
+.plans-note{
+  margin-top:16px;
+  padding:12px;
+  border-radius:9px;
+  background:#fff8e6;
+  color:#6f5200;
+  font-size:12px;
+  line-height:1.5;
+}
+@media(max-width:900px){
+  .plans-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+  .plans-grid{grid-template-columns:1fr}
+}
+
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid #dfe5ea}
 .tab{border:0;background:#fff;padding:15px 6px;font-size:12px;font-weight:bold;cursor:pointer;border-bottom:3px solid transparent}
 .tab.active{color:#c62828;border-bottom-color:#c62828}
@@ -448,7 +579,7 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
         <div class="subscription-top">
           <div class="subscription-title">📦 Abbonamento</div>
           <div class="subscription-summary">
-            <span id="subscriptionPlan" class="subscription-plan">-</span>
+            <button id="subscriptionPlan" class="subscription-plan" type="button" title="Visualizza i piani disponibili">-</button>
             <span id="subscriptionStatusBadge" class="subscription-badge">Caricamento...</span>
             <button id="renewSubscriptionBtn" type="button">Richiedi rinnovo</button>
             <button id="cancelSubscriptionBtn" type="button">Richiedi annullamento</button>
@@ -526,6 +657,29 @@ main{display:grid;grid-template-columns:minmax(0,3fr) minmax(330px,1fr);height:c
     </aside>
   </main>
 </div>
+
+<section id="plansModal" class="plans-modal" aria-hidden="true">
+  <div class="plans-card" role="dialog" aria-modal="true" aria-labelledby="plansTitle">
+    <div class="plans-header">
+      <h2 id="plansTitle">Piani Territorio Live</h2>
+      <button id="closePlansBtn" class="close-btn" type="button" aria-label="Chiudi">✕</button>
+    </div>
+
+    <div class="plans-body">
+      <p class="plans-intro">
+        Confronta il piano attuale con le soluzioni disponibili. La richiesta non modifica automaticamente l’abbonamento:
+        sarà verificata dal gestore.
+      </p>
+
+      <div id="plansGrid" class="plans-grid"></div>
+
+      <div class="plans-note">
+        Prezzi e modalità di pagamento sono configurabili. Per i Comuni potranno essere previste formule mensili,
+        annuali, fattura e altre modalità compatibili con la Pubblica Amministrazione.
+      </div>
+    </div>
+  </div>
+</section>
 
 <section id="passwordModal" class="password-modal" aria-hidden="true">
   <div class="password-card" role="dialog" aria-modal="true" aria-labelledby="passwordTitle">
@@ -734,6 +888,9 @@ const subscriptionNote = document.getElementById("subscriptionNote");
 const subscriptionProgressBar = document.getElementById("subscriptionProgressBar");
 const renewSubscriptionBtn = document.getElementById("renewSubscriptionBtn");
 const cancelSubscriptionBtn = document.getElementById("cancelSubscriptionBtn");
+const plansModal = document.getElementById("plansModal");
+const closePlansBtn = document.getElementById("closePlansBtn");
+const plansGrid = document.getElementById("plansGrid");
 const details = document.getElementById("details");
 const detailTitle = document.getElementById("detailTitle");
 const detailSubtitle = document.getElementById("detailSubtitle");
@@ -1727,12 +1884,67 @@ document.addEventListener("keydown",event => {
   if(event.key === "Escape" && passwordModal.classList.contains("open")){
     closePasswordModal();
   }
+
+  if(event.key === "Escape" && plansModal.classList.contains("open")){
+    closePlansModal();
+  }
 });
 
 logoutBtn.addEventListener("click",async () => {
   await signOut(auth);
   window.location.replace("./login.html");
 });
+
+const SUBSCRIPTION_PLANS = {
+  trial:{
+    label:"Trial gratuito",
+    priceLabel:"Gratuito",
+    priceDetail:"90 giorni",
+    features:[
+      "Accesso completo alla Dashboard Comune",
+      "Gestione delle segnalazioni",
+      "Foto prima e dopo l’intervento",
+      "PDF degli interventi conclusi",
+      "1 operatore"
+    ]
+  },
+  base:{
+    label:"Piano Base",
+    priceLabel:"Da definire",
+    priceDetail:"mensile o annuale",
+    features:[
+      "Gestione ordinaria delle segnalazioni",
+      "Aggiornamento degli stati",
+      "Chiusura con foto finale",
+      "Storico degli interventi",
+      "1 operatore"
+    ]
+  },
+  premium:{
+    label:"Piano Premium",
+    priceLabel:"Da definire",
+    priceDetail:"mensile o annuale",
+    features:[
+      "Tutte le funzioni del Piano Base",
+      "Più operatori comunali",
+      "Statistiche avanzate",
+      "Report PDF completi",
+      "Priorità e tracciamento operativo"
+    ]
+  },
+  enterprise:{
+    label:"Piano Enterprise",
+    priceLabel:"Preventivo",
+    priceDetail:"annuale",
+    features:[
+      "Tutte le funzioni del Piano Premium",
+      "Operatori personalizzabili",
+      "Configurazioni dedicate",
+      "Supporto prioritario",
+      "Gestione amministrativa su misura"
+    ]
+  }
+};
 
 function normalizeSubscriptionPlan(value){
   const plan = String(value || "").trim().toLowerCase();
@@ -2017,6 +2229,80 @@ function renderSubscriptionWidget(){
   subscriptionNote.textContent = subscription.note?.trim() || note;
 }
 
+function renderPlansModal(){
+  const currentPlan = normalizeSubscriptionPlan(currentProfile?.abbonamento?.piano || "trial");
+
+  plansGrid.innerHTML = Object.entries(SUBSCRIPTION_PLANS).map(([planId,plan]) => {
+    const isCurrent = planId === currentPlan;
+
+    return `
+      <article class="plan-card ${isCurrent ? "current" : ""}">
+        ${isCurrent ? `<span class="plan-current-label">Piano attuale</span>` : ""}
+        <h3>${escapeHtml(plan.label)}</h3>
+        <div class="plan-price">
+          ${escapeHtml(plan.priceLabel)}
+          <small>${escapeHtml(plan.priceDetail)}</small>
+        </div>
+        <ul class="plan-features">
+          ${plan.features.map(feature => `<li>${escapeHtml(feature)}</li>`).join("")}
+        </ul>
+        <button
+          class="plan-action"
+          type="button"
+          data-plan="${escapeHtml(planId)}"
+          ${isCurrent ? "disabled" : ""}>
+          ${isCurrent ? "Piano attuale" : "Richiedi questo piano"}
+        </button>
+      </article>
+    `;
+  }).join("");
+
+  plansGrid.querySelectorAll(".plan-action[data-plan]").forEach(button => {
+    button.addEventListener("click",() => {
+      requestPlanChange(button.dataset.plan);
+    });
+  });
+}
+
+function openPlansModal(){
+  renderPlansModal();
+  plansModal.classList.add("open");
+  plansModal.setAttribute("aria-hidden","false");
+}
+
+function closePlansModal(){
+  plansModal.classList.remove("open");
+  plansModal.setAttribute("aria-hidden","true");
+}
+
+function requestPlanChange(planId){
+  if(!currentProfile) return;
+
+  const requestedPlan = SUBSCRIPTION_PLANS[planId];
+  if(!requestedPlan) return;
+
+  const currentSubscription = currentProfile.abbonamento || {};
+  const subject = `Richiesta piano ${requestedPlan.label} - ${currentProfile.comune}`;
+  const body = [
+    "Buongiorno,",
+    "",
+    `il Comune di ${currentProfile.comune} richiede informazioni per passare al piano ${requestedPlan.label} di Territorio Live.`,
+    "",
+    `Piano attuale: ${subscriptionPlanLabel(currentSubscription.piano)}`,
+    `Piano richiesto: ${requestedPlan.label}`,
+    `Prezzo indicato: ${requestedPlan.priceLabel} (${requestedPlan.priceDetail})`,
+    `Referente: ${currentProfile.referente || "-"}`,
+    `Email account: ${currentProfile.email || auth.currentUser?.email || "-"}`,
+    "",
+    "Si richiedono conferma delle condizioni economiche e delle modalità amministrative di pagamento.",
+    "",
+    "Cordiali saluti."
+  ].join("\n");
+
+  window.location.href =
+    `mailto:info@territoriolive.it?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 function requestSubscriptionRenewal(){
   if(!currentProfile) return;
 
@@ -2072,6 +2358,12 @@ function requestSubscriptionCancellation(){
   window.location.href =
     `mailto:info@territoriolive.it?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
+
+subscriptionPlan.addEventListener("click",openPlansModal);
+closePlansBtn.addEventListener("click",closePlansModal);
+plansModal.addEventListener("click",event => {
+  if(event.target === plansModal) closePlansModal();
+});
 
 renewSubscriptionBtn.addEventListener("click",requestSubscriptionRenewal);
 cancelSubscriptionBtn.addEventListener("click",requestSubscriptionCancellation);
