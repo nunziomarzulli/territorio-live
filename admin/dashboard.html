@@ -1283,17 +1283,39 @@ function startNotificationsListener(){
     collection(db,"notifiche"),
     snapshot => {
 
-      console.log(
-        "Notifiche ricevute:",
-        snapshot.docs.map(documentSnapshot => ({
-          id:documentSnapshot.id,
-          ...documentSnapshot.data()
-        }))
+      const notifications = snapshot.docs.map(documentSnapshot => ({
+        id:documentSnapshot.id,
+        ...documentSnapshot.data()
+      }));
+
+      const unreadNotifications = notifications.filter(notification =>
+        notification.lettaAdmin !== true
       );
+
+      notificationBadge.textContent = String(unreadNotifications.length);
+
+      notificationBadge.style.display =
+        unreadNotifications.length > 0
+          ? "flex"
+          : "none";
+
+      if(notifications.length === 0){
+        notificationList.innerHTML = "Nessuna notifica";
+        return;
+      }
+
+      notificationList.innerHTML = notifications
+        .map(notification => `
+          <div class="notificationItem">
+            <strong>${escapeHtml(notification.titolo || "Notifica")}</strong>
+          </div>
+        `)
+        .join("");
 
     },
     error => {
       console.error("Errore ascolto notifiche:",error);
+      notificationList.innerHTML = "Errore nel caricamento delle notifiche";
     }
   );
 
