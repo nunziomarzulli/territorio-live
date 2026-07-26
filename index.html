@@ -2147,7 +2147,15 @@ sendBtn.onclick = async () => {
       moderazioneControlli: moderationResult.moderazioneControlli,
       createdAt: serverTimestamp()
     });
-
+    await addDoc(collection(db, "notifiche"), {
+    tipo: "nuova_segnalazione",
+    titolo: selectedCategory,
+    comune: locationData.comune,
+    provincia: locationData.provincia,
+    indirizzo: locationData.indirizzo,
+    stato: "non_letta",
+    createdAt: serverTimestamp()
+});
     alert("Segnalazione inviata correttamente.");
     resetReport();
     showScreen(startScreen);
