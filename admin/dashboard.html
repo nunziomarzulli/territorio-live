@@ -1181,6 +1181,7 @@ import {
   getFirestore,
   collection,
   getDocs,
+  getDoc,
   setDoc,
   query,
   orderBy,
@@ -1996,53 +1997,80 @@ function renderMap(){
 
 window.openNotificationReport = async function(notification){
 
-  let report = null;
+  const reportId = String(notification.segnalazioneId || "").trim();
 
-  if(notification.segnalazioneId){
-    report = reports.find(item =>
-      item.id === notification.segnalazioneId
-    );
-  }
-
-  if(!report){
-    const notificationTitle = String(notification.titolo || "").trim();
-    const notificationAddress = String(notification.indirizzo || "").trim();
-    const notificationMunicipality = String(notification.comune || "").trim();
-
-    report = reports.find(item =>
-      String(item.categoria || "").trim() === notificationTitle &&
-      String(item.indirizzo || "").trim() === notificationAddress &&
-      String(item.comune || "").trim() === notificationMunicipality
-    );
-  }
-
-  if(!report){
-    alert("Segnalazione non trovata.");
-    return;
-  }
-
-  provinceFilter.value = "Tutte";
-  rebuildFilters();
-  municipalityFilter.value = "Tutti";
-  categoryFilter.value = "Tutte";
-  statusFilter.value = "Tutte";
-  moderationOnly = false;
-
-  renderMap();
-
-  const marker = mapMarkers.find(item =>
-    item.reportId === report.id
-  );
-
-  if(!marker){
-    alert("La segnalazione non è visibile sulla mappa.");
-    return;
-  }
-
-  notificationPanel.classList.remove("active");
-
-  if(notification.lettaAdmin !== true){
+  if(!reportId){
     try{
+      await deleteDoc(doc(db,"notifiche",notification.id));
+    }catch(error){
+      console.error("Errore eliminazione vecchia notifica:",error);
+    }
+
+    alert("Questa vecchia notifica non è collegata a una segnalazione ed è stata rimossa.");
+    return;
+  }
+
+  try{
+    const reportSnapshot = await getDoc(
+      doc(db,"segnalazioni",reportId)
+    );
+
+    if(!reportSnapshot.exists()){
+      await deleteDoc(
+        doc(db,"notifiche",notification.id)
+      );
+
+      notificationPanel.classList.remove("active");
+      alert("La segnalazione è stata eliminata. La notifica è stata rimossa.");
+      return;
+    }
+
+    const report = {
+      id:reportSnapshot.id,
+      ...reportSnapshot.data()
+    };
+
+    if(report.eliminataDaAdmin === true || report.visibileAdmin === false){
+      await deleteDoc(
+        doc(db,"notifiche",notification.id)
+      );
+
+      notificationPanel.classList.remove("active");
+      alert("La segnalazione non è più disponibile. La notifica è stata rimossa.");
+      return;
+    }
+
+    const existingReportIndex = reports.findIndex(item =>
+      item.id === report.id
+    );
+
+    if(existingReportIndex >= 0){
+      reports[existingReportIndex] = report;
+    }else{
+      reports.unshift(report);
+    }
+
+    provinceFilter.value = "Tutte";
+    rebuildFilters();
+    municipalityFilter.value = "Tutti";
+    categoryFilter.value = "Tutte";
+    statusFilter.value = "Tutte";
+    moderationOnly = false;
+
+    renderMap();
+
+    const marker = mapMarkers.find(item =>
+      item.reportId === report.id
+    );
+
+    if(!marker){
+      alert("La segnalazione non è visibile sulla mappa.");
+      return;
+    }
+
+    notificationPanel.classList.remove("active");
+
+    if(notification.lettaAdmin !== true){
       await updateDoc(
         doc(db,"notifiche",notification.id),
         {
@@ -2050,15 +2078,17 @@ window.openNotificationReport = async function(notification){
           lettaAdminAt:serverTimestamp()
         }
       );
-    }catch(error){
-      console.error("Errore aggiornamento notifica:",error);
     }
-  }
 
-  markerClusterGroup.zoomToShowLayer(marker,() => {
-    adminMap.setView(marker.getLatLng(),18);
-    marker.openPopup();
-  });
+    markerClusterGroup.zoomToShowLayer(marker,() => {
+      adminMap.setView(marker.getLatLng(),18);
+      marker.openPopup();
+    });
+
+  }catch(error){
+    console.error("Errore apertura notifica:",error);
+    alert("Errore durante l'apertura della segnalazione.");
+  }
 };
 
 async function loadReports(){
@@ -2155,6 +2185,26 @@ window.approveAdminReport = async function(reportId){
   }
 };
 
+async function deleteNotificationsForReport(report){
+  const matchingNotifications = notificationsCache.filter(notification => {
+    if(notification.segnalazioneId){
+      return notification.segnalazioneId === report.id;
+    }
+
+    return (
+      String(notification.titolo || "").trim() === String(report.categoria || "").trim() &&
+      String(notification.indirizzo || "").trim() === String(report.indirizzo || "").trim() &&
+      String(notification.comune || "").trim() === String(report.comune || "").trim()
+    );
+  });
+
+  await Promise.all(
+    matchingNotifications.map(notification =>
+      deleteDoc(doc(db,"notifiche",notification.id))
+    )
+  );
+}
+
 window.deleteAdminReport = async function(reportId){
   const report = reports.find(item => item.id === reportId);
 
@@ -2196,6 +2246,7 @@ window.deleteAdminReport = async function(reportId){
       );
     }
 
+    await deleteNotificationsForReport(report);
     await loadReports();
 
   }catch(error){
