@@ -1305,12 +1305,14 @@ function startNotificationsListener(){
       }
 
       notificationList.innerHTML = notifications
+        .map(notification => `
           <div class="notificationItem">
-          <strong>${escapeHtml(notification.titolo || "Notifica")}</strong><br>
-          📍 ${escapeHtml(notification.indirizzo || "-")}<br>
-          🏘️ ${escapeHtml(notification.comune || "-")} (${escapeHtml(notification.provincia || "-")})<br>
-          <small>${formatDate(notification.createdAt)}</small>
-        </div>
+            <strong>${escapeHtml(notification.titolo || "Notifica")}</strong><br>
+            📍 ${escapeHtml(notification.indirizzo || "-")}<br>
+            🏘️ ${escapeHtml(notification.comune || "-")} (${escapeHtml(notification.provincia || "-")})<br>
+            <small>${formatDate(notification.createdAt)}</small>
+          </div>
+        `)
         .join("");
 
     },
