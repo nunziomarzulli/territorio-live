@@ -189,6 +189,29 @@ header{
 .notificationItem:hover{
     background:#2d2d2d;
 }
+
+.notificationItemHeader{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.notificationDeleteBtn{
+    flex:0 0 auto;
+    border:none;
+    border-radius:7px;
+    padding:5px 8px;
+    background:#c62828;
+    color:#fff;
+    font-size:12px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.notificationDeleteBtn:hover{
+    background:#e53935;
+}
 #toolbar{
   min-height:104px;
   display:grid;
@@ -1317,7 +1340,15 @@ function startNotificationsListener(){
           <div
             class="notificationItem"
             data-notification-id="${escapeHtml(notification.id)}">
-            <strong>${escapeHtml(notification.titolo || "Notifica")}</strong><br>
+            <div class="notificationItemHeader">
+              <strong>${escapeHtml(notification.titolo || "Notifica")}</strong>
+              <button
+                class="notificationDeleteBtn"
+                type="button"
+                data-delete-notification-id="${escapeHtml(notification.id)}">
+                Elimina
+              </button>
+            </div>
             📍 ${escapeHtml(notification.indirizzo || "-")}<br>
             🏘️ ${escapeHtml(notification.comune || "-")} (${escapeHtml(notification.provincia || "-")})<br>
             <small>${formatDate(notification.createdAt)}</small>
@@ -1333,7 +1364,32 @@ function startNotificationsListener(){
   );
 }
 
-notificationList.addEventListener("click",event => {
+notificationList.addEventListener("click",async event => {
+  const deleteButton = event.target.closest(".notificationDeleteBtn");
+
+  if(deleteButton){
+    event.preventDefault();
+    event.stopPropagation();
+
+    const notificationId =
+      deleteButton.dataset.deleteNotificationId;
+
+    if(!notificationId){
+      return;
+    }
+
+    try{
+      await deleteDoc(
+        doc(db,"notifiche",notificationId)
+      );
+    }catch(error){
+      console.error("Errore eliminazione notifica:",error);
+      alert("Impossibile eliminare la notifica.");
+    }
+
+    return;
+  }
+
   const notificationItem = event.target.closest(".notificationItem");
 
   if(!notificationItem){
