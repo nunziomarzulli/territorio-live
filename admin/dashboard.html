@@ -1266,6 +1266,7 @@ const notificationList = document.getElementById("notificationList");
 let municipalities = [];
 let imageViewerHistoryActive = false;
 let notificationsUnsubscribe = null;
+let notificationsCache = [];
 
 let adminMap = null;
 let markerClusterGroup = null;
@@ -1283,12 +1284,18 @@ function startNotificationsListener(){
     collection(db,"notifiche"),
     snapshot => {
 
-      const notifications = snapshot.docs.map(documentSnapshot => ({
-        id:documentSnapshot.id,
-        ...documentSnapshot.data()
-      }));
+      notificationsCache = snapshot.docs
+        .map(documentSnapshot => ({
+          id:documentSnapshot.id,
+          ...documentSnapshot.data()
+        }))
+        .sort((a,b) => {
+          const dateA = timestampToDate(a.createdAt)?.getTime() || 0;
+          const dateB = timestampToDate(b.createdAt)?.getTime() || 0;
+          return dateB - dateA;
+        });
 
-      const unreadNotifications = notifications.filter(notification =>
+      const unreadNotifications = notificationsCache.filter(notification =>
         notification.lettaAdmin !== true
       );
 
@@ -1299,14 +1306,16 @@ function startNotificationsListener(){
           ? "flex"
           : "none";
 
-      if(notifications.length === 0){
+      if(notificationsCache.length === 0){
         notificationList.innerHTML = "Nessuna notifica";
         return;
       }
 
-      notificationList.innerHTML = notifications
+      notificationList.innerHTML = notificationsCache
         .map(notification => `
-          <div class="notificationItem">
+          <div
+            class="notificationItem"
+            data-notification-id="${escapeHtml(notification.id)}">
             <strong>${escapeHtml(notification.titolo || "Notifica")}</strong><br>
             📍 ${escapeHtml(notification.indirizzo || "-")}<br>
             🏘️ ${escapeHtml(notification.comune || "-")} (${escapeHtml(notification.provincia || "-")})<br>
@@ -1321,8 +1330,29 @@ function startNotificationsListener(){
       notificationList.innerHTML = "Errore nel caricamento delle notifiche";
     }
   );
-
 }
+
+notificationList.addEventListener("click",event => {
+  const notificationItem = event.target.closest(".notificationItem");
+
+  if(!notificationItem){
+    return;
+  }
+
+  const notificationId = notificationItem.dataset.notificationId;
+
+  const notification = notificationsCache.find(item =>
+    item.id === notificationId
+  );
+
+  if(!notification){
+    alert("Notifica non trovata.");
+    return;
+  }
+
+  window.openNotificationReport(notification);
+});
+
 function openImageViewer(imageSource, caption){
   if(!imageSource){
     return;
@@ -1926,7 +1956,7 @@ function renderMap(){
           : createOpenIcon(report.categoria)
       }
     );
-
+    marker.reportId = report.id;
     marker.bindPopup(
       createPopupHtml(report),
       {
@@ -1963,6 +1993,73 @@ function renderMap(){
     });
   }
 }
+
+window.openNotificationReport = async function(notification){
+
+  let report = null;
+
+  if(notification.segnalazioneId){
+    report = reports.find(item =>
+      item.id === notification.segnalazioneId
+    );
+  }
+
+  if(!report){
+    const notificationTitle = String(notification.titolo || "").trim();
+    const notificationAddress = String(notification.indirizzo || "").trim();
+    const notificationMunicipality = String(notification.comune || "").trim();
+
+    report = reports.find(item =>
+      String(item.categoria || "").trim() === notificationTitle &&
+      String(item.indirizzo || "").trim() === notificationAddress &&
+      String(item.comune || "").trim() === notificationMunicipality
+    );
+  }
+
+  if(!report){
+    alert("Segnalazione non trovata.");
+    return;
+  }
+
+  provinceFilter.value = "Tutte";
+  rebuildFilters();
+  municipalityFilter.value = "Tutti";
+  categoryFilter.value = "Tutte";
+  statusFilter.value = "Tutte";
+  moderationOnly = false;
+
+  renderMap();
+
+  const marker = mapMarkers.find(item =>
+    item.reportId === report.id
+  );
+
+  if(!marker){
+    alert("La segnalazione non è visibile sulla mappa.");
+    return;
+  }
+
+  notificationPanel.classList.remove("active");
+
+  if(notification.lettaAdmin !== true){
+    try{
+      await updateDoc(
+        doc(db,"notifiche",notification.id),
+        {
+          lettaAdmin:true,
+          lettaAdminAt:serverTimestamp()
+        }
+      );
+    }catch(error){
+      console.error("Errore aggiornamento notifica:",error);
+    }
+  }
+
+  markerClusterGroup.zoomToShowLayer(marker,() => {
+    adminMap.setView(marker.getLatLng(),18);
+    marker.openPopup();
+  });
+};
 
 async function loadReports(){
   refreshBtn.disabled = true;
