@@ -117,7 +117,78 @@ header{
 #logoutBtn{
   background:#c62828;
 }
+#notificationWrapper{
+    position:relative;
+}
 
+#notificationBtn{
+    position:relative;
+    width:46px;
+    height:46px;
+    border:none;
+    border-radius:10px;
+    background:#1565c0;
+    color:#fff;
+    font-size:22px;
+    cursor:pointer;
+}
+
+#notificationBadge{
+    position:absolute;
+    top:-6px;
+    right:-6px;
+    min-width:20px;
+    height:20px;
+    padding:0 5px;
+    border-radius:50%;
+    background:#e53935;
+    color:#fff;
+    font-size:11px;
+    font-weight:bold;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+#notificationPanel{
+    position:absolute;
+    top:56px;
+    right:0;
+    width:360px;
+    max-height:450px;
+    overflow-y:auto;
+    background:#222;
+    border:1px solid #444;
+    border-radius:12px;
+    display:none;
+    z-index:9999;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+}
+
+#notificationPanel.active{
+    display:block;
+}
+
+.notificationTitle{
+    padding:12px;
+    font-weight:bold;
+    border-bottom:1px solid #444;
+    color:#39d353;
+}
+
+#notificationList{
+    padding:12px;
+}
+
+.notificationItem{
+    padding:10px;
+    border-bottom:1px solid #333;
+    cursor:pointer;
+}
+
+.notificationItem:hover{
+    background:#2d2d2d;
+}
 #toolbar{
   min-height:104px;
   display:grid;
@@ -817,7 +888,26 @@ body.image-viewer-open{
         🏛️ Gestione Comuni
         <span id="municipalitiesCount" aria-label="Comuni registrati">0</span>
       </button>
+<div id="notificationWrapper">
 
+    <button id="notificationBtn" type="button">
+        🔔
+        <span id="notificationBadge">0</span>
+    </button>
+
+    <div id="notificationPanel">
+
+        <div class="notificationTitle">
+            Notifiche
+        </div>
+
+        <div id="notificationList">
+            Nessuna notifica
+        </div>
+
+    </div>
+
+</div>
       <button id="refreshBtn" type="button">
         ↻ Aggiorna segnalazioni
       </button>
@@ -1167,6 +1257,10 @@ const municipalityMessage = document.getElementById("municipalityMessage");
 const municipalitiesList = document.getElementById("municipalitiesList");
 const municipalitiesCount = document.getElementById("municipalitiesCount");
 
+const notificationBtn = document.getElementById("notificationBtn");
+const notificationBadge = document.getElementById("notificationBadge");
+const notificationPanel = document.getElementById("notificationPanel");
+const notificationList = document.getElementById("notificationList");  
 let municipalities = [];
 let imageViewerHistoryActive = false;
 
