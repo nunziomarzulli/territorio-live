@@ -1187,7 +1187,8 @@ import {
   deleteDoc,
   updateDoc,
   doc,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -1257,13 +1258,14 @@ const municipalityMessage = document.getElementById("municipalityMessage");
 const municipalitiesList = document.getElementById("municipalitiesList");
 const municipalitiesCount = document.getElementById("municipalitiesCount");
 
+const notificationWrapper = document.getElementById("notificationWrapper");  
 const notificationBtn = document.getElementById("notificationBtn");
 const notificationBadge = document.getElementById("notificationBadge");
 const notificationPanel = document.getElementById("notificationPanel");
 const notificationList = document.getElementById("notificationList");  
 let municipalities = [];
 let imageViewerHistoryActive = false;
-
+let notificationsUnsubscribe = null;
 
 let adminMap = null;
 let markerClusterGroup = null;
@@ -2450,7 +2452,23 @@ function initMap(){
 
   adminMap.addLayer(markerClusterGroup);
 }
+notificationBtn.addEventListener("click", (event) => {
 
+    event.stopPropagation();
+
+    notificationPanel.classList.toggle("active");
+
+});
+
+document.addEventListener("click", (event) => {
+
+    if (!notificationWrapper.contains(event.target)) {
+
+        notificationPanel.classList.remove("active");
+
+    }
+
+});
 provinceFilter.addEventListener("change",() => {
   const selectedProvince = provinceFilter.value;
 
