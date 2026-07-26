@@ -1273,7 +1273,31 @@ let mapMarkers = [];
 let reports = [];
 let moderationOnly = false;
 
+function startNotificationsListener(){
 
+  if(notificationsUnsubscribe){
+    notificationsUnsubscribe();
+  }
+
+  notificationsUnsubscribe = onSnapshot(
+    collection(db,"notifiche"),
+    snapshot => {
+
+      console.log(
+        "Notifiche ricevute:",
+        snapshot.docs.map(documentSnapshot => ({
+          id:documentSnapshot.id,
+          ...documentSnapshot.data()
+        }))
+      );
+
+    },
+    error => {
+      console.error("Errore ascolto notifiche:",error);
+    }
+  );
+
+}
 function openImageViewer(imageSource, caption){
   if(!imageSource){
     return;
@@ -2696,6 +2720,7 @@ onAuthStateChanged(auth,user => {
     adminMap.invalidateSize();
     loadReports();
     loadMunicipalities();
+    startNotificationsListener();
   },150);
 });
 
