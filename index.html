@@ -2126,7 +2126,7 @@ sendBtn.onclick = async () => {
 
     sendBtn.textContent = "Invio in corso...";
 
-    await addDoc(collection(db, "segnalazioni"), {
+   const nuovaSegnalazione = await addDoc(collection(db, "segnalazioni"), {
       categoria: selectedCategory,
       lat: currentLat,
       lng: currentLng,
@@ -2147,12 +2147,13 @@ sendBtn.onclick = async () => {
       moderazioneControlli: moderationResult.moderazioneControlli,
       createdAt: serverTimestamp()
     });
-    await addDoc(collection(db, "notifiche"), {
-    tipo: "nuova_segnalazione",
-    titolo: selectedCategory,
-    comune: locationData.comune,
-    provincia: locationData.provincia,
-    indirizzo: locationData.indirizzo,
+           await addDoc(collection(db, "notifiche"), {
+            tipo: "nuova_segnalazione",
+            segnalazioneId: nuovaSegnalazione.id,
+            titolo: selectedCategory,
+            comune: locationData.comune,
+            provincia: locationData.provincia,
+            indirizzo: locationData.indirizzo,
     lettaAdmin: false,
     createdAt: serverTimestamp()
 });
