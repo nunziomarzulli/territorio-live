@@ -891,6 +891,20 @@ body.image-viewer-open{
   .municipality-actions{justify-content:flex-start}
 }
 
+/* Popup Leaflet: altezza controllata su schermi piccoli senza bloccare la mappa */
+.leaflet-popup-content{
+  max-height:min(520px,68vh);
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+}
+
+@media(max-width:560px){
+  .leaflet-popup-content{
+    max-height:56vh;
+  }
+}
+
 </style>
 </head>
 
@@ -2010,28 +2024,18 @@ function renderMap(){
       {
         icon:isResolved
           ? createResolvedIcon()
-          : createOpenIcon(report.categoria),
-        bubblingMouseEvents:false
+          : createOpenIcon(report.categoria)
       }
     );
-
     marker.reportId = report.id;
-
     marker.bindPopup(
       createPopupHtml(report),
       {
         maxWidth:300,
-        autoClose:false,
-        closeOnClick:false,
+        maxHeight:Math.max(220,Math.min(520,window.innerHeight * 0.56)),
         keepInView:true
       }
     );
-
-    marker.on("click",event => {
-      if(event.originalEvent){
-        L.DomEvent.stopPropagation(event.originalEvent);
-      }
-    });
 
     markerClusterGroup.addLayer(marker);
     mapMarkers.push(marker);
@@ -2760,9 +2764,7 @@ function initMap(){
     return;
   }
 
-  adminMap = L.map("adminMap",{
-    closePopupOnClick:false
-  }).setView(
+  adminMap = L.map("adminMap").setView(
     [41.1171,16.8719],
     10
   );
@@ -2778,7 +2780,8 @@ function initMap(){
   markerClusterGroup = L.markerClusterGroup({
     showCoverageOnHover:false,
     spiderfyOnMaxZoom:true,
-    removeOutsideVisibleBounds:true,
+    /* Mantiene il marker attivo durante l'auto-pan del popup su iPhone. */
+    removeOutsideVisibleBounds:false,
     animate:true,
     maxClusterRadius:55,
     disableClusteringAtZoom:17,
