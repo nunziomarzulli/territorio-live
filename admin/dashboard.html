@@ -2010,16 +2010,28 @@ function renderMap(){
       {
         icon:isResolved
           ? createResolvedIcon()
-          : createOpenIcon(report.categoria)
+          : createOpenIcon(report.categoria),
+        bubblingMouseEvents:false
       }
     );
+
     marker.reportId = report.id;
+
     marker.bindPopup(
       createPopupHtml(report),
       {
-        maxWidth:300
+        maxWidth:300,
+        autoClose:false,
+        closeOnClick:false,
+        keepInView:true
       }
     );
+
+    marker.on("click",event => {
+      if(event.originalEvent){
+        L.DomEvent.stopPropagation(event.originalEvent);
+      }
+    });
 
     markerClusterGroup.addLayer(marker);
     mapMarkers.push(marker);
@@ -2748,7 +2760,9 @@ function initMap(){
     return;
   }
 
-  adminMap = L.map("adminMap").setView(
+  adminMap = L.map("adminMap",{
+    closePopupOnClick:false
+  }).setView(
     [41.1171,16.8719],
     10
   );
