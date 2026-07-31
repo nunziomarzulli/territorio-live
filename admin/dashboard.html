@@ -2024,7 +2024,8 @@ function renderMap(){
       {
         icon:isResolved
           ? createResolvedIcon()
-          : createOpenIcon(report.categoria)
+          : createOpenIcon(report.categoria),
+        bubblingMouseEvents:false
       }
     );
     marker.reportId = report.id;
@@ -2033,7 +2034,10 @@ function renderMap(){
       {
         maxWidth:300,
         maxHeight:Math.max(220,Math.min(520,window.innerHeight * 0.56)),
-        keepInView:true
+        keepInView:true,
+        autoClose:true,
+        closeOnClick:true,
+        closeOnEscapeKey:true
       }
     );
 
@@ -2829,6 +2833,11 @@ function initMap(){
   });
 
   adminMap.addLayer(markerClusterGroup);
+
+  // Un tocco/click su una zona libera della mappa chiude il popup aperto.
+  adminMap.on("click",() => {
+    adminMap.closePopup();
+  });
 }
 notificationBtn.addEventListener("click", (event) => {
 
