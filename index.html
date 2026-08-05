@@ -255,22 +255,6 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
   width:100%;
   margin-bottom:25px;
 }
-#contactScreen{
-  background:#f5f5f5;
-  flex-direction:column;
-  justify-content:flex-start;
-  overflow-y:auto;
-}
-
-#contactScreen .primary,
-#contactScreen .secondary{
-  width:100%;
-  margin-top:12px;
-}
-
-#contactScreen .secondary{
-  margin-bottom:25px;
-}    
 .my-report-card{
   width:100%;
   background:white;
@@ -567,7 +551,6 @@ body.image-viewer-open{
   <div id="topMenu">
   <button id="myReportsBtn">📋<span>LE MIE<br>SEGNALAZIONI</span></button>
   <button id="howItWorksBtn">ⓘ<span>COME<br>FUNZIONA</span></button>
-  <button id="contactManagerBtn">🏛️<span>PER COMUNI<br>ED ENTI</span></button>
 </div>  
   <div class="logo">
   <img src="icon-193.png" alt="Territorio Live Logo" class="logo-img">
@@ -783,69 +766,6 @@ body.image-viewer-open{
   </div>
 
 </section>
-<section id="contactScreen" class="screen">
-
-  <div class="info-page">
-
-    <h2>🏛️ Territorio Live per Comuni ed Enti</h2>
-
-    <div class="info-card">
-      <div class="info-icon">🏢</div>
-      <div>
-        <strong>Dashboard dedicata agli Enti</strong>
-        <p>
-          Sei un Comune, un Ente pubblico o una società partecipata?
-          Richiedi l’attivazione della Dashboard Comune di Territorio Live.
-        </p>
-      </div>
-    </div>
-
-    <div class="info-card">
-      <div class="info-icon">🔒</div>
-      <div>
-        <strong>Richiesta da email istituzionale</strong>
-        <p>
-          Per motivi di sicurezza, le richieste vengono prese in considerazione
-          esclusivamente se inviate da un indirizzo email ufficiale del Comune
-          o dell’Ente, come protocollo, ufficio tecnico, lavori pubblici o PEC.
-        </p>
-      </div>
-    </div>
-
-    <div class="info-card">
-      <div class="info-icon">✅</div>
-      <div>
-        <strong>Attivazione verificata manualmente</strong>
-        <p>
-          Il gestore verifica l’identità dell’Ente prima di abilitare l’accesso
-          alla Dashboard Comune. Non è prevista una registrazione automatica.
-        </p>
-      </div>
-    </div>
-
-    <div class="info-card">
-      <div class="info-icon">📧</div>
-      <div>
-        <strong>Email di riferimento</strong>
-        <p>info@territoriolive.it</p>
-      </div>
-    </div>
-
-    <button
-      class="primary"
-      type="button"
-      onclick="location.href='mailto:info@territoriolive.it?subject=Richiesta%20attivazione%20Dashboard%20Comune&body=Comune/Ente%3A%0A%0AProvincia%3A%0A%0AReferente%3A%0A%0ARuolo%3A%0A%0AEmail%20istituzionale%3A%0A%0ATelefono%3A%0A%0ARichiediamo%20l%27attivazione%20della%20Dashboard%20Comune%20di%20Territorio%20Live.'">
-      📩 Richiedi attivazione
-    </button>
-
-    <button id="backFromContactBtn" class="secondary" type="button">
-      ← Torna alla Home
-    </button>
-
-  </div>
-
-</section>
-
 <div id="imageViewerOverlay" role="dialog" aria-modal="true" aria-label="Anteprima immagine ingrandita">
   <button id="closeImageViewerBtn" type="button" aria-label="Chiudi immagine">×</button>
   <img id="imageViewerImg" alt="Immagine ingrandita">
@@ -977,9 +897,6 @@ const backFromMyReportsBtn = document.getElementById("backFromMyReportsBtn");
 const howItWorksBtn = document.getElementById("howItWorksBtn");
 const howItWorksScreen = document.getElementById("howItWorksScreen");
 const backFromHowItWorksBtn = document.getElementById("backFromHowItWorksBtn");  
-const contactManagerBtn = document.getElementById("contactManagerBtn");
-const contactScreen = document.getElementById("contactScreen");
-const backFromContactBtn = document.getElementById("backFromContactBtn");
 const imageViewerOverlay = document.getElementById("imageViewerOverlay");
 const imageViewerImg = document.getElementById("imageViewerImg");
 const closeImageViewerBtn = document.getElementById("closeImageViewerBtn");
@@ -1034,7 +951,6 @@ function showScreen(screen){
   exploreScreen.classList.remove("active");
   myReportsScreen.classList.remove("active");
   howItWorksScreen.classList.remove("active");
-  contactScreen.classList.remove("active");
   screen.classList.add("active");
 
 }
@@ -1461,13 +1377,6 @@ howItWorksBtn.onclick = () => {
 backFromHowItWorksBtn.onclick = () => {
   showScreen(startScreen);
 };
-  contactManagerBtn.onclick = () => {
-  showScreen(contactScreen);
-};
-
-backFromContactBtn.onclick = () => {
-  showScreen(startScreen);
-};  
 continueBtn.onclick = async () => {
   showScreen(loadingScreen);
 
@@ -2486,7 +2395,6 @@ function renderMunicipalitySuggestions(searchText){
       };
     });
 }
-
 
 
 async function loadReportsFromFirestore(){
