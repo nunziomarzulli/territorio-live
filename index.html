@@ -255,22 +255,6 @@ button{border:none;padding:14px 22px;border-radius:12px;font-size:18px;cursor:po
   width:100%;
   margin-bottom:25px;
 }
-#contactScreen{
-  background:#f5f5f5;
-  flex-direction:column;
-  justify-content:flex-start;
-  overflow-y:auto;
-}
-
-#contactScreen .primary,
-#contactScreen .secondary{
-  width:100%;
-  margin-top:12px;
-}
-
-#contactScreen .secondary{
-  margin-bottom:25px;
-}    
 .my-report-card{
   width:100%;
   background:white;
@@ -969,7 +953,6 @@ function showScreen(screen){
   exploreScreen.classList.remove("active");
   myReportsScreen.classList.remove("active");
   howItWorksScreen.classList.remove("active");
-  contactScreen.classList.remove("active");
   screen.classList.add("active");
 
 }
