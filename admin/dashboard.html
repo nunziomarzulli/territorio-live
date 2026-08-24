@@ -1317,7 +1317,48 @@ let adminMap = null;
 let markerClusterGroup = null;
 let mapMarkers = [];
 let reports = [];
+let reportsUnsubscribe = null;
 let moderationOnly = false;
+
+/*
+  Segnalazioni in tempo reale.
+  Firestore aggiorna automaticamente la mappa quando una segnalazione
+  viene aggiunta, modificata o eliminata.
+*/
+function startReportsListener(){
+
+  if(reportsUnsubscribe){
+    reportsUnsubscribe();
+  }
+
+  const reportsQuery = query(
+    collection(db,"segnalazioni"),
+    orderBy("createdAt","desc")
+  );
+
+  reportsUnsubscribe = onSnapshot(
+    reportsQuery,
+    snapshot => {
+
+      reports = snapshot.docs
+        .map(docSnapshot => ({
+          id:docSnapshot.id,
+          ...docSnapshot.data()
+        }))
+        .filter(report => report.eliminataDaAdmin !== true);
+
+      rebuildFilters();
+      renderMap();
+
+      refreshBtn.disabled = false;
+      refreshBtn.textContent = "↻ Aggiorna segnalazioni";
+    },
+    error => {
+      console.error("Errore ascolto realtime segnalazioni:",error);
+      statsBox.innerHTML = "Errore nel caricamento.";
+    }
+  );
+}
 
 function startNotificationsListener(){
 
@@ -3090,13 +3131,12 @@ async function refreshDashboardOnResume(){
       },50);
     }
 
-    await Promise.all([
-      loadReports(),
-      loadMunicipalities()
-    ]);
-
-    // Riavvia il listener notifiche se la pagina era stata sospesa a lungo.
+    // Riavvia i listener realtime dopo un'eventuale sospensione del browser/PWA.
+    startReportsListener();
     startNotificationsListener();
+
+    // I Comuni non sono realtime: li aggiorniamo normalmente.
+    await loadMunicipalities();
 
   }catch(error){
     console.error("Errore aggiornamento automatico Dashboard:",error);
@@ -3124,6 +3164,16 @@ logoutBtn.addEventListener("click",async () => {
   logoutBtn.textContent = "Uscita...";
 
   try{
+    if(reportsUnsubscribe){
+      reportsUnsubscribe();
+      reportsUnsubscribe = null;
+    }
+
+    if(notificationsUnsubscribe){
+      notificationsUnsubscribe();
+      notificationsUnsubscribe = null;
+    }
+
     await signOut(auth);
     window.location.replace("./index.html");
   }catch(error){
@@ -3149,7 +3199,7 @@ onAuthStateChanged(auth,user => {
 
   setTimeout(() => {
     adminMap.invalidateSize();
-    loadReports();
+    startReportsListener();
     loadMunicipalities();
     startNotificationsListener();
   },150);
