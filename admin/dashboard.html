@@ -3059,6 +3059,66 @@ municipalitiesList.addEventListener("click",event => {
 
 refreshBtn.addEventListener("click",loadReports);
 
+/*
+  Aggiornamento automatico su smartphone/PWA.
+  Su mobile la pagina può restare sospesa in memoria: quando l'utente
+  torna alla Dashboard non viene necessariamente rieseguito il caricamento iniziale.
+  Questi eventi forzano un nuovo aggiornamento quando la pagina torna visibile.
+*/
+let lastAutoRefreshAt = 0;
+let autoRefreshRunning = false;
+
+async function refreshDashboardOnResume(){
+  if(!auth.currentUser || document.visibilityState === "hidden"){
+    return;
+  }
+
+  const now = Date.now();
+
+  // Evita richieste duplicate quando focus/pageshow/visibilitychange scattano insieme.
+  if(autoRefreshRunning || now - lastAutoRefreshAt < 1200){
+    return;
+  }
+
+  autoRefreshRunning = true;
+  lastAutoRefreshAt = now;
+
+  try{
+    if(adminMap){
+      setTimeout(() => {
+        adminMap.invalidateSize();
+      },50);
+    }
+
+    await Promise.all([
+      loadReports(),
+      loadMunicipalities()
+    ]);
+
+    // Riavvia il listener notifiche se la pagina era stata sospesa a lungo.
+    startNotificationsListener();
+
+  }catch(error){
+    console.error("Errore aggiornamento automatico Dashboard:",error);
+  }finally{
+    autoRefreshRunning = false;
+  }
+}
+
+document.addEventListener("visibilitychange",() => {
+  if(document.visibilityState === "visible"){
+    refreshDashboardOnResume();
+  }
+});
+
+window.addEventListener("pageshow",() => {
+  refreshDashboardOnResume();
+});
+
+window.addEventListener("focus",() => {
+  refreshDashboardOnResume();
+});
+
 logoutBtn.addEventListener("click",async () => {
   logoutBtn.disabled = true;
   logoutBtn.textContent = "Uscita...";
