@@ -1851,6 +1851,66 @@ function getFilteredReports(){
   });
 }
 
+window.copyPublicReportLink = async function(reportId){
+
+  if(!reportId){
+    alert("ID della segnalazione non disponibile.");
+    return;
+  }
+
+  const publicUrl =
+    `https://territoriolive.it/?segnalazione=${encodeURIComponent(reportId)}`;
+
+  try{
+
+    if(
+      navigator.clipboard &&
+      window.isSecureContext
+    ){
+      await navigator.clipboard.writeText(publicUrl);
+
+      alert(
+        "Link della segnalazione copiato!\n\n" +
+        publicUrl
+      );
+
+      return;
+    }
+
+    const temporaryInput = document.createElement("textarea");
+
+    temporaryInput.value = publicUrl;
+    temporaryInput.style.position = "fixed";
+    temporaryInput.style.left = "-9999px";
+
+    document.body.appendChild(temporaryInput);
+
+    temporaryInput.focus();
+    temporaryInput.select();
+
+    document.execCommand("copy");
+
+    temporaryInput.remove();
+
+    alert(
+      "Link della segnalazione copiato!\n\n" +
+      publicUrl
+    );
+
+  }catch(error){
+
+    console.error(
+      "Errore copia link segnalazione:",
+      error
+    );
+
+    prompt(
+      "Copia manualmente questo link:",
+      publicUrl
+    );
+  }
+};
+
 function createPopupHtml(report){
   const status = String(report.stato || "aperta").toLowerCase();
   const isResolved = status === "risolta" || status === "risolto";
@@ -1996,6 +2056,13 @@ function createPopupHtml(report){
           rel="noopener noreferrer">
           Apri in Google Maps
         </a>
+
+        <button
+          type="button"
+          style="background:#1877f2;color:white;"
+          onclick="window.copyPublicReportLink('${report.id}')">
+          🔗 Copia link segnalazione
+        </button>
 
         <button
           class="delete-btn"
