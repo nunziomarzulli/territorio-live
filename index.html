@@ -929,6 +929,17 @@ let availableMunicipalities = [];
 let currentMunicipalityFilter = "Tutti";
 let currentCategoryFilter = "Tutte";
 let imageViewerHistoryActive = false;
+
+/*
+  Deep link pubblico.
+  Esempio:
+  https://territoriolive.it/?segnalazione=ID_FIRESTORE
+*/
+const sharedReportId = new URLSearchParams(window.location.search)
+  .get("segnalazione");
+
+let sharedReportOpened = false;
+
 const MAX_RESOLVE_DISTANCE_METERS = 30;
 const MAX_REOPEN_DISTANCE_METERS = 15;
 const MAX_DUPLICATE_DISTANCE_METERS = 25;
@@ -1027,6 +1038,26 @@ window.addEventListener("load", () => {
   setTimeout(() => {
     preloadFaceDetector();
   }, 300);
+
+  /*
+    Se l'URL contiene ?segnalazione=..., salta la Home e
+    apre direttamente la mappa pubblica.
+  */
+  if (sharedReportId) {
+    currentMunicipalityFilter = "Tutti";
+    currentCategoryFilter = "Tutte";
+    municipalitySearch.value = "";
+    clearMunicipalitySearch.style.display = "none";
+    municipalitySuggestions.style.display = "none";
+    categoryFilter.value = "Tutte";
+
+    showScreen(exploreScreen);
+
+    setTimeout(async () => {
+      initExploreMap();
+      await loadReportsFromFirestore();
+    }, 200);
+  }
 });
 
 cameraBtn.onclick = () => {
@@ -2556,6 +2587,9 @@ ${!isResolved && data.ownerId === ownerId
 
       markerItem.bindPopup(popupHtml);
 
+      // Associa l'ID Firestore al marker per i link pubblici.
+      markerItem.reportId = reportId;
+
       if (exploreClusterGroup) {
         exploreClusterGroup.addLayer(markerItem);
       }
@@ -2572,9 +2606,70 @@ ${currentMunicipalityFilter !== "Tutti"
 ⭐ Risoluzioni: <strong>${totalResolutionsCount}</strong>
 `;
 
+    // Se la pagina è stata aperta da un link condiviso,
+    // porta la mappa sulla segnalazione indicata e apre il popup.
+    await openSharedReportFromUrl();
+
   } catch (error) {
     console.error("Errore caricamento mappa:", error);
     alert("Errore nel caricamento delle segnalazioni.");
+  }
+}
+
+
+/*
+  Apre automaticamente la segnalazione indicata nel parametro
+  ?segnalazione=ID_FIRESTORE
+*/
+async function openSharedReportFromUrl(){
+
+  if (
+    !sharedReportId ||
+    sharedReportOpened ||
+    !exploreMap
+  ){
+    return;
+  }
+
+  const targetMarker = exploreMarkers.find(
+    markerItem => String(markerItem.reportId || "") === String(sharedReportId)
+  );
+
+  if (!targetMarker){
+    sharedReportOpened = true;
+
+    alert(
+      "La segnalazione richiesta non è disponibile sulla mappa."
+    );
+
+    return;
+  }
+
+  sharedReportOpened = true;
+
+  const openMarker = () => {
+    const markerPosition = targetMarker.getLatLng();
+
+    exploreMap.setView(
+      markerPosition,
+      Math.max(exploreMap.getZoom(), 17)
+    );
+
+    setTimeout(() => {
+      targetMarker.openPopup();
+    }, 250);
+  };
+
+  if (
+    exploreClusterGroup &&
+    typeof exploreClusterGroup.zoomToShowLayer === "function"
+  ){
+    exploreClusterGroup.zoomToShowLayer(
+      targetMarker,
+      openMarker
+    );
+  }else{
+    openMarker();
   }
 }
 
